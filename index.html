@@ -277,6 +277,53 @@ details.sol[open] summary{margin-bottom:6px}
 .bar>div{height:100%;background:var(--blue)}
 @media (min-width:900px){.page{padding-left:22px;padding-right:22px}}
 
+/* ---------- v3: chat, revise, confidence ---------- */
+.tbav{width:38px;height:38px;border-radius:50%;overflow:hidden;background:#fff;border:2px solid rgba(255,255,255,.7);padding:0;cursor:pointer;flex:none}
+.tbav svg{width:100%;height:100%;display:block}
+.bottomnav button{position:relative}
+.bottomnav button.dot::after,.iconbtn.dot::after{content:'';position:absolute;top:3px;left:calc(50% + 7px);width:10px;height:10px;border-radius:50%;background:#e5484d;border:2px solid #fff}
+.iconbtn{position:relative}
+.iconbtn.dot::after{top:4px;left:auto;right:4px;border-color:var(--brand2)}
+.badge{display:inline-block;min-width:20px;padding:1px 7px;border-radius:999px;background:#e5484d;color:#fff;font-size:.72rem;font-weight:700;text-align:center;margin-left:auto}
+.drawer .badge{margin-left:auto}
+.chat{display:flex;flex-direction:column;gap:6px}
+.bubble{max-width:82%;padding:8px 12px 6px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;font-size:.95rem;box-shadow:0 1px 2px rgba(20,30,80,.06)}
+.bubble.me{align-self:flex-end;background:var(--brand2);color:#fff;border-bottom-right-radius:5px}
+.bubble.them{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:5px}
+.bubble.req.me{background:#e8e6fb;color:var(--ink);border:1px solid #cfcaf5}
+.bubble.req.them{background:var(--syellow);border-color:#f3e3a1}
+.bubble .tm{font-size:.66rem;opacity:.7;margin-top:3px;text-align:right}
+.daysep{align-self:center;font-size:.72rem;color:var(--muted);background:#eceef4;border-radius:999px;padding:2px 10px;margin:8px 0 4px}
+.chatbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:#fff;border-top:1px solid var(--line);padding:8px 10px}
+.chatbar.admin{padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+.chatbar .in{max-width:860px;margin:0 auto;display:flex;gap:8px;align-items:flex-end}
+.chatbar textarea{flex:1;min-height:44px;max-height:120px;resize:none;line-height:1.35}
+.chatbar .btn{min-height:44px;padding:10px 14px}
+.chatbar .btn svg{width:20px;height:20px}
+.stars{display:inline-flex;gap:1px;color:#d5d8e2;font-size:1.05rem;letter-spacing:-1px;white-space:nowrap}
+.stars.sm{font-size:.9rem}
+.stars i{font-style:normal}
+.stars i.on{color:#f5a524}
+.conf{text-align:center}
+.starin{display:flex;justify-content:center;gap:6px;margin:6px 0 2px}
+.starin button{background:none;border:0;font-size:2.3rem;line-height:1;color:#d5d8e2;cursor:pointer;padding:2px;transition:transform .1s}
+.starin button.on{color:#f5a524}
+.starin button:active{transform:scale(1.2)}
+.seg{display:flex;background:#eceef6;border-radius:12px;padding:4px;gap:4px;margin:4px 0 12px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:9px 6px;font-weight:600;font-size:.88rem;color:var(--muted);cursor:pointer}
+.seg button.on{background:#fff;color:var(--brand2);box-shadow:0 1px 3px rgba(20,30,80,.12)}
+.fgrid{display:flex;flex-direction:column;gap:8px}
+.fh{font-family:var(--head);font-weight:700;color:var(--brand2);font-size:.95rem;margin:10px 2px 0}
+.fcard{background:#fff;border:1px solid var(--line);border-left:4px solid var(--brand2);border-radius:12px;padding:10px 12px;overflow-x:auto;line-height:1.6}
+.fcard .dtable{margin:0}
+.rsum{margin:0;padding-left:20px;line-height:1.6}
+.rsum li{margin:6px 0}
+h4.bh{margin:12px 0 4px;color:var(--brand2);font-size:.95rem}
+.btn.wrapbtn{white-space:normal;text-align:left;line-height:1.3}
+.btn.wrapbtn svg{flex:none}
+.fcard .dtable{font-size:.92rem}
+.fcard .dtable td{padding:6px 5px}
+
 </style>
 </head>
 <body>
@@ -304,7 +351,8 @@ import {
   setPersistence, inMemoryPersistence
 } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, writeBatch
+  getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, writeBatch,
+  onSnapshot, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
 // ================= CONFIG =================
@@ -440,6 +488,10 @@ const ICON = {
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 14H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l-5-5 5-5M5 12h11"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></svg>',
+  rev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6c-2-1.5-5-2-8-1.5V19c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5C17 4 14 4.5 12 6z"/><path d="M12 6v14.5"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.4-7.5a1 1 0 0 0 0-1.8L3.4 3.6a.9.9 0 0 0-1.3 1L4 11l9 1-9 1-1.9 6.4a.9.9 0 0 0 1.3 1z"/></svg>',
   wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.4 5 5.1-1.3A10 10 0 1 0 12 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2s-1 .3-3.4-.7-3.9-3.4-4-3.6-1-1.3-1-2.5.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>'
 };
 
@@ -473,6 +525,7 @@ function inlineRich(s) {
 function renderBlocks(blocks) {
   return (blocks || []).map(b => {
     if (b.t === 'p') return `<p>${inlineRich(b.x)}</p>`;
+    if (b.t === 'h') return `<h4 class="bh">${inlineRich(b.x)}</h4>`;
     if (b.t === 'ans') return `<div class="ansbox">${inlineRich(b.x)}</div>`;
     if (b.t === 'img') return `<img class="qimg qimgph" data-img="${esc(b.id)}" alt="Figure">`;
     if (b.t === 'table') return `<table class="dtable">${(b.rows || []).map(r => `<tr>${(r.c || []).map(c => `<td>${inlineRich(c)}</td>`).join('')}</tr>`).join('')}</table>`;
@@ -483,6 +536,7 @@ function renderBlocks(blocks) {
 function blocksToText(blocks) {
   return (blocks || []).map(b => {
     if (b.t === 'p') return b.x;
+    if (b.t === 'h') return '# ' + b.x;
     if (b.t === 'ans') return '>> ' + b.x;
     if (b.t === 'img') return `[img:${b.id}]`;
     if (b.t === 'table') return (b.rows || []).map(r => '| ' + (r.c || []).join(' | ') + ' |').join('\n');
@@ -503,6 +557,7 @@ function textToBlocks(text) {
     const m = line.match(/^\[img:([A-Za-z0-9_-]+)\]$/);
     if (m) out.push({ t: 'img', id: m[1] });
     else if (line.startsWith('>>')) out.push({ t: 'ans', x: line.replace(/^>>\s*/, '') });
+    else if (/^#\s+\S/.test(line)) out.push({ t: 'h', x: line.replace(/^#\s+/, '') });
     else out.push({ t: 'p', x: line });
   }
   return out;
@@ -551,12 +606,73 @@ async function createLogin(email, password) {
 
 // ================= BOOT =================
 let bootedOnce = false;
+// live listeners (chat): 'view' ones stop when the page changes, 'global' ones when the user signs out
+const LSN = { view: [], global: [] };
+function stopView() { LSN.view.splice(0).forEach(u => { try { u(); } catch { } }); }
+function stopAllListeners() { stopView(); LSN.global.splice(0).forEach(u => { try { u(); } catch { } }); }
+function listen(kind, ref, onData, onErr) {
+  const u = onSnapshot(ref, onData, e => { console.warn('listener', e && e.code); if (onErr) onErr(e); });
+  LSN[kind].push(u); return u;
+}
+const snapDocs = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+const msgId = () => now().toString(36) + Math.random().toString(36).slice(2, 7);
+function fmtTime(ms) { return ms ? new Date(ms).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : ''; }
+function fmtDayLabel(ms) {
+  const d = new Date(ms), t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Today';
+  if (d.toDateString() === y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: d.getFullYear() === t.getFullYear() ? undefined : 'numeric' });
+}
+// chat bubbles, shared by student and admin views
+function bubblesHtml(msgs, mine, reqCard) {
+  let lastDay = '';
+  return msgs.map(m => {
+    const day = fmtDayLabel(m.at); const sep = day !== lastDay ? `<div class="daysep">${esc(day)}</div>` : ''; lastDay = day;
+    const me = m.from === mine;
+    if (m.kind === 'solreq') return sep + `<div class="bubble req ${me ? 'me' : 'them'}">${reqCard(m)}<div class="tm">${fmtTime(m.at)}</div></div>`;
+    return sep + `<div class="bubble ${me ? 'me' : 'them'}">${esc(m.text)}<div class="tm">${fmtTime(m.at)}</div></div>`;
+  }).join('');
+}
+
+// ---------- confidence stars ----------
+const CONF_LABEL = ['Not rated yet', 'Not confident yet', 'A little confident', 'Okay', 'Confident', 'Very confident'];
+function starsHtml(v, cls = '') { v = Math.round(Number(v) || 0); return `<span class="stars ${cls}" aria-label="${v} of 5 stars">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= v ? 'on' : ''}">★</i>`).join('')}</span>`; }
+const confKey = (g, ch) => `${g}_${ch}`;
+
+// ---------- revision notes: revision/g10c06 {grade, chapter, formulas, summary}; Class 10 has built-in notes ----------
+const revId = (g, ch) => `g${pad(g)}c${pad(ch)}`;
+function revDefault(g, ch) {
+  const d = Number(g) === 10 && typeof REV10 !== 'undefined' ? REV10[Number(ch)] : null;
+  return d ? { grade: 10, chapter: Number(ch), formulas: textToBlocks(d.f), summary: textToBlocks(d.s), builtin: true } : null;
+}
+async function loadRevision(g) {          // -> {chapter: doc}
+  const out = {};
+  let docs = [];
+  try { docs = await listC('revision', where('grade', '==', Number(g))); } catch (e) { console.warn('revision', e && e.code); }
+  docs.forEach(d => out[d.chapter] = d);
+  if (Number(g) === 10 && typeof REV10 !== 'undefined') Object.keys(REV10).forEach(ch => { if (!out[ch]) out[ch] = revDefault(10, ch); });
+  return out;
+}
+function revFormulasHtml(blocks) {
+  return (blocks || []).map(b => {
+    if (b.t === 'h') return `<div class="fh">${inlineRich(b.x)}</div>`;
+    if (b.t === 'p') return `<div class="fcard qtext">${inlineRich(b.x)}</div>`;
+    return `<div class="fcard qtext">${renderBlocks([b])}</div>`;
+  }).join('');
+}
+function revSummaryHtml(blocks) {
+  let html = '', list = [];
+  const flush = () => { if (list.length) { html += `<ul class="rsum qtext">${list.map(x => `<li>${inlineRich(x)}</li>`).join('')}</ul>`; list = []; } };
+  (blocks || []).forEach(b => { if (b.t === 'p') list.push(b.x); else { flush(); html += renderBlocks([b]); } });
+  flush(); return html;
+}
 onAuthStateChanged(auth, async u => {
   if (S.settingUp) return;
   await routeUser(u);
 });
 async function routeUser(u) {
-  S.user = u; S.role = null; S.sid = null; S.profile = null;
+  stopAllListeners();
+  S.user = u; S.role = null; S.sid = null; S.profile = null; S.thread = null;
   if (!u) { bootedOnce = true; return showLogin(); }
   $('#app').innerHTML = spinner();
   try {
@@ -939,6 +1055,306 @@ function renderGuidePart(g, idx) {
     <p class="center tiny muted" style="margin-top:18px">${esc(g.footer)} · Part ${idx + 1} of ${n}</p>`;
 }
 
+// ================= BUILT-IN REVISION NOTES: CLASS 10 (CBSE, rationalised syllabus) =================
+// Same text format as the admin editor: one point per line, "# " = small heading, maths between $ signs, "|" lines = table.
+// The teacher can edit any chapter in the app (saved to revision/g10cNN); this is the starting version.
+const REV10 = {
+  1: {
+    f: String.raw`# Fundamental Theorem of Arithmetic
+Every composite number can be written as $p_1^{a_1} \times p_2^{a_2} \times \cdots \times p_n^{a_n}$ (primes), in exactly one way apart from the order
+# HCF and LCM by prime factorisation
+HCF = product of the **smallest** power of each **common** prime factor
+LCM = product of the **greatest** power of **each** prime factor involved
+For any two positive integers: $\text{HCF}(a, b) \times \text{LCM}(a, b) = a \times b$
+This product rule does **not** work for three numbers
+# Irrational numbers
+If a prime $p$ divides $a^2$, then $p$ divides $a$
+$\sqrt{2},\ \sqrt{3},\ \sqrt{5}$ and $\sqrt{p}$ for every prime $p$ are irrational
+Rational $\pm$ irrational = irrational
+Non-zero rational $\times$ irrational = irrational`,
+    s: String.raw`Every composite number is a product of primes in exactly one way (apart from order). This is the Fundamental Theorem of Arithmetic.
+To find HCF and LCM, first write each number as a product of prime powers.
+Use $\text{HCF} \times \text{LCM} = a \times b$ to find a missing HCF or LCM of two numbers.
+A number ends in 0 only if it has both 2 and 5 as prime factors. So $6^n$ or $4^n$ can never end in 0 (no factor 5).
+To prove $\sqrt{p}$ is irrational: assume $\sqrt{p} = \frac{a}{b}$ with $a, b$ co-prime, square both sides, show $p$ divides both $a$ and $b$, a contradiction.
+To prove $3 + 2\sqrt{5}$ is irrational: assume it is rational, rearrange to get $\sqrt{5}$ = rational, a contradiction.
+1 is neither prime nor composite.`
+  },
+  2: {
+    f: String.raw`# Zeroes
+$k$ is a zero of $p(x)$ if $p(k) = 0$
+A polynomial of degree $n$ has at most $n$ zeroes
+Zero of the linear polynomial $ax + b$: $x = -\dfrac{b}{a}$
+# Quadratic polynomial $ax^2 + bx + c$ with zeroes $\alpha, \beta$
+Sum of zeroes: $\alpha + \beta = -\dfrac{b}{a} = -\dfrac{\text{coefficient of } x}{\text{coefficient of } x^2}$
+Product of zeroes: $\alpha\beta = \dfrac{c}{a} = \dfrac{\text{constant term}}{\text{coefficient of } x^2}$
+Quadratic polynomial with given zeroes: $k\left[x^2 - (\alpha + \beta)x + \alpha\beta\right]$
+# Useful identities
+$\alpha^2 + \beta^2 = (\alpha + \beta)^2 - 2\alpha\beta$
+$(\alpha - \beta)^2 = (\alpha + \beta)^2 - 4\alpha\beta$
+$\dfrac{1}{\alpha} + \dfrac{1}{\beta} = \dfrac{\alpha + \beta}{\alpha\beta}$
+$\alpha^3 + \beta^3 = (\alpha + \beta)^3 - 3\alpha\beta(\alpha + \beta)$`,
+    s: String.raw`Degree 1 = linear, degree 2 = quadratic, degree 3 = cubic polynomial.
+The zeroes of $p(x)$ are the x-coordinates of the points where the graph of $y = p(x)$ meets the x-axis.
+The graph of a quadratic polynomial is a parabola: it opens upward if $a > 0$ and downward if $a < 0$.
+A quadratic polynomial can have 2, 1 or 0 zeroes (graph cuts, touches or misses the x-axis).
+Count zeroes from a graph: count the points where the curve meets the x-axis.
+To find zeroes: split the middle term, factorise, and put each factor equal to 0. Then verify using the sum and product of zeroes.
+For "find the polynomial whose zeroes are ...", find the sum and product first, then use $x^2 - (\text{sum})x + \text{product}$.`
+  },
+  3: {
+    f: String.raw`# General form
+$a_1x + b_1y + c_1 = 0$ and $a_2x + b_2y + c_2 = 0$
+# Compare the ratios
+| Ratios | Lines | Solutions |
+| $\frac{a_1}{a_2} \ne \frac{b_1}{b_2}$ | Intersecting | Exactly one (consistent) |
+| $\frac{a_1}{a_2} = \frac{b_1}{b_2} = \frac{c_1}{c_2}$ | Coincident | Infinitely many (dependent, consistent) |
+| $\frac{a_1}{a_2} = \frac{b_1}{b_2} \ne \frac{c_1}{c_2}$ | Parallel | None (inconsistent) |
+# Methods
+Graphical: the solution is the point where the two lines intersect
+Substitution: find $y$ (or $x$) from one equation and put it into the other
+Elimination: make the coefficients of one variable equal, then add or subtract`,
+    s: String.raw`A pair of linear equations in two variables can be solved by the graphical method, substitution or elimination.
+Graphical method: draw both lines on the same axes using two or three points each; the point of intersection is the solution.
+If elimination gives a true statement like $0 = 0$: infinitely many solutions. A false statement like $0 = 5$: no solution.
+For "find k so that the pair has a unique / no / infinitely many solutions", use the ratio conditions.
+Word problems (ages, fractions, two-digit numbers, speed, money): name the two unknowns, form two equations, solve, and check in the question.
+Write the final answer in words, e.g. "Cost of one pen = ₹ 12".`
+  },
+  4: {
+    f: String.raw`Standard form: $ax^2 + bx + c = 0,\ a \ne 0$
+Quadratic formula: $x = \dfrac{-b \pm \sqrt{b^2 - 4ac}}{2a}$
+Discriminant: $D = b^2 - 4ac$
+# Nature of roots
+| Discriminant | Roots |
+| $D > 0$ | Two distinct real roots |
+| $D = 0$ | Two equal real roots, each $-\frac{b}{2a}$ |
+| $D < 0$ | No real roots |
+Sum of roots $= -\dfrac{b}{a}$, product of roots $= \dfrac{c}{a}$`,
+    s: String.raw`$\alpha$ is a root of $ax^2 + bx + c = 0$ if $a\alpha^2 + b\alpha + c = 0$. The roots of the equation are the zeroes of the polynomial.
+Factorisation: split $b$ into two numbers whose product is $ac$ and whose sum is $b$, then factorise.
+The quadratic formula works for every quadratic equation. Use it when splitting the middle term is hard.
+"Equal roots" means $D = 0$; "real roots" means $D \ge 0$; "no real roots" means $D < 0$.
+Before using the formula, bring the equation to standard form (everything on one side, $= 0$).
+Word problems (area, speed, ages, consecutive numbers): form the equation, solve, and reject answers that don't make sense, like a negative length or speed.`
+  },
+  5: {
+    f: String.raw`# Arithmetic progression $a,\ a + d,\ a + 2d,\ \ldots$
+Common difference: $d = a_2 - a_1 = a_{k+1} - a_k$
+nth term: $a_n = a + (n - 1)d$
+nth term from the end (last term $l$): $l - (n - 1)d$
+# Sum of the first n terms
+$S_n = \dfrac{n}{2}\left[2a + (n - 1)d\right]$
+$S_n = \dfrac{n}{2}(a + l)$, where $l$ is the last term
+$a_n = S_n - S_{n-1}$
+Sum of the first $n$ natural numbers: $1 + 2 + \cdots + n = \dfrac{n(n + 1)}{2}$
+# Handy
+Three terms in AP: $a - d$, $a$, $a + d$
+$a,\ b,\ c$ are in AP if $2b = a + c$`,
+    s: String.raw`In an AP each term is the previous term plus a fixed number $d$. $d$ can be positive, negative or zero.
+To check if a list is an AP, check that the difference between consecutive terms is always the same.
+To find which term a number is, put $a_n$ equal to it and solve for $n$. If $n$ is not a positive whole number, the number is not a term.
+With an odd number of terms $n$, the middle term is the $\left(\frac{n + 1}{2}\right)$th term.
+In $S_n$, $n$ is the number of terms, not the last term. Find $n$ first with $a_n = a + (n - 1)d$ if only the last term is given.
+Multiples of 7 between 50 and 500, savings that grow by a fixed amount, rows of logs: all are APs.`
+  },
+  6: {
+    f: String.raw`# Similar triangles $\triangle ABC \sim \triangle PQR$
+Corresponding angles equal: $\angle A = \angle P,\ \angle B = \angle Q,\ \angle C = \angle R$
+Corresponding sides in the same ratio: $\dfrac{AB}{PQ} = \dfrac{BC}{QR} = \dfrac{CA}{RP}$
+# Basic Proportionality Theorem (Thales)
+In $\triangle ABC$, if $DE \parallel BC$ with D on AB and E on AC: $\dfrac{AD}{DB} = \dfrac{AE}{EC}$
+Also $\dfrac{AD}{AB} = \dfrac{AE}{AC}$, and $\dfrac{DE}{BC} = \dfrac{AD}{AB}$ (since $\triangle ADE \sim \triangle ABC$)
+Converse: if $\dfrac{AD}{DB} = \dfrac{AE}{EC}$, then $DE \parallel BC$
+# Similarity criteria
+| Criterion | When |
+| AAA (or AA) | Two pairs of corresponding angles are equal |
+| SSS | All three pairs of corresponding sides are in the same ratio |
+| SAS | One pair of angles equal and the sides including them in the same ratio |`,
+    s: String.raw`Similar figures have the same shape but not necessarily the same size. All circles, all squares and all equilateral triangles are similar.
+Two polygons with the same number of sides are similar if their corresponding angles are equal **and** their corresponding sides are in the same ratio.
+Write the vertices in matching order: $\triangle ABC \sim \triangle PQR$ means A ↔ P, B ↔ Q, C ↔ R.
+The proof of the Basic Proportionality Theorem is a frequently asked question: learn it with the figure.
+Usual plan: show two triangles are similar (often AA, using parallel lines, vertically opposite or common angles), then write the ratio of their sides.
+In a trapezium ABCD with $AB \parallel DC$, the diagonals divide each other in the same ratio: $\frac{AO}{OC} = \frac{BO}{OD}$.`
+  },
+  7: {
+    f: String.raw`Distance between $P(x_1, y_1)$ and $Q(x_2, y_2)$: $PQ = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}$
+Distance of $P(x, y)$ from the origin: $OP = \sqrt{x^2 + y^2}$
+# Section formula (P divides AB internally in the ratio $m_1 : m_2$)
+$P = \left(\dfrac{m_1x_2 + m_2x_1}{m_1 + m_2},\ \dfrac{m_1y_2 + m_2y_1}{m_1 + m_2}\right)$
+Ratio $k : 1$: $P = \left(\dfrac{kx_2 + x_1}{k + 1},\ \dfrac{ky_2 + y_1}{k + 1}\right)$
+Mid-point: $\left(\dfrac{x_1 + x_2}{2},\ \dfrac{y_1 + y_2}{2}\right)$
+# Axes
+A point on the x-axis is $(x, 0)$; a point on the y-axis is $(0, y)$`,
+    s: String.raw`Use the distance formula to show that points form an isosceles, equilateral or right triangle, a square, rhombus, rectangle or parallelogram, or that they are collinear ($AB + BC = AC$).
+To find the ratio in which a point (or an axis) divides a segment, take the ratio as $k : 1$ and solve for $k$.
+Points of trisection divide a segment in the ratios $1 : 2$ and $2 : 1$.
+The diagonals of a parallelogram bisect each other, so both diagonals have the same mid-point. Use this to find a missing vertex.
+Square: 4 equal sides and equal diagonals. Rhombus: 4 equal sides. Rectangle: opposite sides equal and equal diagonals.
+A point equidistant from A and B: put $PA^2 = PB^2$ to avoid square roots.`
+  },
+  8: {
+    f: String.raw`# In right $\triangle ABC$, right-angled at B, for angle A
+$\sin A = \dfrac{\text{opposite}}{\text{hypotenuse}} = \dfrac{BC}{AC}$
+$\cos A = \dfrac{\text{adjacent}}{\text{hypotenuse}} = \dfrac{AB}{AC}$
+$\tan A = \dfrac{\text{opposite}}{\text{adjacent}} = \dfrac{BC}{AB} = \dfrac{\sin A}{\cos A}$
+$\operatorname{cosec} A = \dfrac{1}{\sin A}$
+$\sec A = \dfrac{1}{\cos A}$
+$\cot A = \dfrac{1}{\tan A} = \dfrac{\cos A}{\sin A}$
+# Identities
+$\sin^2 A + \cos^2 A = 1$
+$\sec^2 A - \tan^2 A = 1$, i.e. $1 + \tan^2 A = \sec^2 A$ $(0^\circ \le A < 90^\circ)$
+$\operatorname{cosec}^2 A - \cot^2 A = 1$, i.e. $1 + \cot^2 A = \operatorname{cosec}^2 A$ $(0^\circ < A \le 90^\circ)$
+# Values to learn
+| $A$ | $0^\circ$ | $30^\circ$ | $45^\circ$ | $60^\circ$ | $90^\circ$ |
+| $\sin A$ | $0$ | $\frac{1}{2}$ | $\frac{1}{\sqrt{2}}$ | $\frac{\sqrt{3}}{2}$ | $1$ |
+| $\cos A$ | $1$ | $\frac{\sqrt{3}}{2}$ | $\frac{1}{\sqrt{2}}$ | $\frac{1}{2}$ | $0$ |
+| $\tan A$ | $0$ | $\frac{1}{\sqrt{3}}$ | $1$ | $\sqrt{3}$ | – |
+| $\operatorname{cosec} A$ | – | $2$ | $\sqrt{2}$ | $\frac{2}{\sqrt{3}}$ | $1$ |
+| $\sec A$ | $1$ | $\frac{2}{\sqrt{3}}$ | $\sqrt{2}$ | $2$ | – |
+| $\cot A$ | – | $\sqrt{3}$ | $1$ | $\frac{1}{\sqrt{3}}$ | $0$ |
+– means not defined. Tip: $\sin$ values are $\frac{\sqrt{0}}{2}, \frac{\sqrt{1}}{2}, \frac{\sqrt{2}}{2}, \frac{\sqrt{3}}{2}, \frac{\sqrt{4}}{2}$; $\cos$ is the same list backwards`,
+    s: String.raw`Trigonometric ratios depend only on the angle, not on the size of the right triangle.
+For acute angles, $\sin A$ and $\cos A$ lie between 0 and 1, while $\sec A$ and $\operatorname{cosec} A$ are at least 1.
+As A increases from $0^\circ$ to $90^\circ$, $\sin A$ increases from 0 to 1 and $\cos A$ decreases from 1 to 0.
+If one ratio is given (say $\tan A = \frac{3}{4}$), draw a right triangle with those sides, find the third side by Pythagoras, then write any other ratio.
+To prove an identity, start from the more complicated side, write everything in terms of sin and cos, and use $\sin^2 A + \cos^2 A = 1$.
+$\sin^2 A$ means $(\sin A)^2$, not $\sin (A^2)$. And $\sin A$ is one symbol: it is not "sin × A".`
+  },
+  9: {
+    f: String.raw`$\tan\theta = \dfrac{\text{height}}{\text{horizontal distance}}$, so height $=$ distance $\times \tan\theta$
+$\sin\theta = \dfrac{\text{height}}{\text{slant length}}$ (use when a ladder, string or wire length is given)
+$\cos\theta = \dfrac{\text{horizontal distance}}{\text{slant length}}$
+# Values used most
+$\tan 30^\circ = \dfrac{1}{\sqrt{3}}$,  $\tan 45^\circ = 1$,  $\tan 60^\circ = \sqrt{3}$
+$\sin 30^\circ = \cos 60^\circ = \dfrac{1}{2}$,  $\sin 60^\circ = \cos 30^\circ = \dfrac{\sqrt{3}}{2}$
+$\sqrt{3} \approx 1.732$,  $\sqrt{2} \approx 1.414$
+Angle of elevation of B from A = angle of depression of A from B (alternate angles)`,
+    s: String.raw`Line of sight: the line from the observer's eye to the object being viewed.
+Angle of elevation: measured **up** from the horizontal, when the object is above eye level.
+Angle of depression: measured **down** from the horizontal, when the object is below eye level.
+Always draw a neat figure first: mark the right angle, the known length and the angles.
+Choose the ratio that links the known side with the unknown one; most questions need $\tan$.
+With two angles from two points, make two right triangles that share a side and solve the two equations together.
+If the angle is measured from the observer's eye, add the observer's height to the answer.
+Rationalise: $\frac{50}{\sqrt{3}} = \frac{50\sqrt{3}}{3}$. Use $\sqrt{3} = 1.732$ only when the question asks.`
+  },
+  10: {
+    f: String.raw`The tangent at any point of a circle is perpendicular to the radius through the point of contact: $OP \perp PT$
+The lengths of the two tangents from an external point are equal: $PA = PB$
+Tangent length from P at distance $d$ from the centre (radius $r$): $PT = \sqrt{d^2 - r^2}$
+Tangents from an external point are equally inclined to the line joining the point to the centre: $\angle APO = \angle BPO$
+With tangents PA and PB: $\angle APB + \angle AOB = 180^\circ$
+# Number of tangents
+| Point P | Tangents through P |
+| Inside the circle | 0 |
+| On the circle | 1 |
+| Outside the circle | 2 |`,
+    s: String.raw`A secant meets the circle at two points; a tangent touches it at exactly one point, the point of contact.
+Theorems to prove in the exam: (1) the tangent is perpendicular to the radius at the point of contact; (2) the tangents from an external point are equal.
+In tangent questions, join the centre to the point of contact: you get a right angle, then use Pythagoras.
+A quadrilateral ABCD drawn around a circle: $AB + CD = AD + BC$ (use equal tangents from each vertex).
+A parallelogram drawn around a circle is a rhombus.
+Tangents drawn at the ends of a diameter are parallel.`
+  },
+  11: {
+    f: String.raw`Circumference $= 2\pi r$, area of a circle $= \pi r^2$
+Area of a sector of angle $\theta$: $\dfrac{\theta}{360^\circ} \times \pi r^2$
+Length of the arc: $l = \dfrac{\theta}{360^\circ} \times 2\pi r$
+Perimeter of the sector $= 2r + l$
+Area of the minor segment = area of the sector $-$ area of $\triangle OAB$
+Area of $\triangle OAB$: $\dfrac{\sqrt{3}}{4}r^2$ for $\theta = 60^\circ$ (equilateral), $\dfrac{1}{2}r^2$ for $\theta = 90^\circ$, $\dfrac{\sqrt{3}}{4}r^2$ for $\theta = 120^\circ$
+Area of the major sector $= \pi r^2 -$ area of the minor sector
+Area of the major segment $= \pi r^2 -$ area of the minor segment
+Semicircle: area $= \dfrac{1}{2}\pi r^2$, perimeter $= \pi r + 2r$
+# Clock hands
+Minute hand turns $6^\circ$ per minute; hour hand turns $0.5^\circ$ per minute ($30^\circ$ per hour)`,
+    s: String.raw`A sector is the region between two radii and an arc. A segment is the region between a chord and an arc.
+The minor sector or segment goes with the smaller angle $\theta$; the major one is the rest of the circle.
+The angle of the major sector is $360^\circ - \theta$.
+For $\theta = 60^\circ$, triangle OAB is equilateral, so the chord AB equals the radius.
+Use $\pi = \frac{22}{7}$ or $3.14$ exactly as the question says.
+Write units: cm for lengths, cm² for areas.`
+  },
+  12: {
+    f: String.raw`# Cuboid (length $l$, breadth $b$, height $h$)
+Lateral surface area $= 2h(l + b)$
+Total surface area $= 2(lb + bh + hl)$
+Volume $= lbh$
+# Cube (side $a$)
+Lateral surface area $= 4a^2$,  total surface area $= 6a^2$
+Volume $= a^3$
+# Right circular cylinder (radius $r$, height $h$)
+Curved surface area $= 2\pi rh$
+Total surface area $= 2\pi r(r + h)$
+Volume $= \pi r^2h$
+# Right circular cone (radius $r$, height $h$, slant height $l$)
+Curved surface area $= \pi rl$
+Total surface area $= \pi r(l + r)$
+Volume $= \dfrac{1}{3}\pi r^2h$
+# Sphere and hemisphere (radius $r$)
+Sphere: surface area $= 4\pi r^2$,  volume $= \dfrac{4}{3}\pi r^3$
+Hemisphere: curved surface area $= 2\pi r^2$,  total surface area $= 3\pi r^2$
+Hemisphere: volume $= \dfrac{2}{3}\pi r^3$
+# Useful
+Slant height of a cone: $l = \sqrt{r^2 + h^2}$
+Diagonal of a cuboid $= \sqrt{l^2 + b^2 + h^2}$,  diagonal of a cube $= a\sqrt{3}$
+# Combinations of solids
+Volume of the combined solid = sum of the volumes of the parts
+Surface area of the combined solid = sum of the **visible** surfaces only (leave out the faces where the solids are joined)
+$1 \text{ m}^3 = 1000$ litres,  $1$ litre $= 1000 \text{ cm}^3$`,
+    s: String.raw`First name the parts of the solid, e.g. toy = cone on a hemisphere, capsule = cylinder with a hemisphere at each end, tent = cylinder with a cone on top.
+Volume: add the volumes of all parts. Surface area: add only the surfaces you can see from outside.
+Hollowed-out solid (e.g. a cone scooped out of a cylinder): volume = outer solid $-$ removed part; surface area = the remaining outer surface + the new inner surface.
+Same radius for joined parts: a hemisphere on a cylinder has the same $r$ as the cylinder.
+Change all lengths to the same unit before calculating.
+Use the same value of $\pi$ throughout the question.`
+  },
+  13: {
+    f: String.raw`# Mean of grouped data
+Class mark: $x_i = \dfrac{\text{upper limit} + \text{lower limit}}{2}$
+Direct method: $\bar{x} = \dfrac{\sum f_i x_i}{\sum f_i}$
+Assumed mean method: $\bar{x} = a + \dfrac{\sum f_i d_i}{\sum f_i}$, where $d_i = x_i - a$
+Step-deviation method: $\bar{x} = a + \left(\dfrac{\sum f_i u_i}{\sum f_i}\right) \times h$, where $u_i = \dfrac{x_i - a}{h}$
+# Mode
+$\text{Mode} = l + \left(\dfrac{f_1 - f_0}{2f_1 - f_0 - f_2}\right) \times h$
+$l$ = lower limit of the modal class, $f_1$ = its frequency, $f_0$ = frequency of the class before it, $f_2$ = frequency of the class after it, $h$ = class size
+# Median
+$\text{Median} = l + \left(\dfrac{\frac{n}{2} - cf}{f}\right) \times h$
+$l$ = lower limit of the median class, $n = \sum f_i$, $cf$ = cumulative frequency of the class **before** the median class, $f$ = frequency of the median class, $h$ = class size
+# Empirical relation
+$3\ \text{Median} = \text{Mode} + 2\ \text{Mean}$`,
+    s: String.raw`Modal class: the class with the highest frequency.
+Median class: the class whose cumulative frequency is greater than and nearest to $\frac{n}{2}$.
+If the classes are not continuous (10–19, 20–29, ...), make them continuous first: 9.5–19.5, 19.5–29.5, ...
+Choose the assumed mean $a$ near the middle of the $x_i$ values. Use step-deviation when the class sizes are equal.
+For a missing frequency, form an equation using $\sum f_i$ and the given mean or median.
+Always write the modal class or median class and the values of $l$, $f$, $h$ before putting them in the formula; it carries marks.`
+  },
+  14: {
+    f: String.raw`$P(E) = \dfrac{\text{Number of outcomes favourable to } E}{\text{Total number of possible outcomes}}$
+$0 \le P(E) \le 1$
+$P(E) + P(\text{not } E) = 1$, so $P(\bar{E}) = 1 - P(E)$
+Sure event: $P = 1$; impossible event: $P = 0$
+The probabilities of all the elementary events of an experiment add up to 1
+# Sample spaces to know
+| Experiment | Outcomes |
+| One coin | 2: H, T |
+| Two coins | 4: HH, HT, TH, TT |
+| Three coins | 8 |
+| One die | 6: 1 to 6 |
+| Two dice | 36 pairs |
+| Pack of cards | 52: 4 suits of 13; 26 red (♥ ♦), 26 black (♠ ♣); 12 face cards (J, Q, K); 4 aces |`,
+    s: String.raw`Theoretical probability assumes all outcomes are equally likely.
+An elementary event has exactly one outcome.
+Probability can be written as a fraction, decimal or percentage, but it is never negative and never more than 1.
+For two dice, list all 36 pairs in a 6 × 6 grid before counting; e.g. a sum of 8 comes from 5 pairs.
+"At least one" questions are often easier as $1 - P(\text{none})$.
+1 is neither prime nor composite: on a die, the primes are 2, 3 and 5.`
+  }
+};
+
 // ================= STUDENT =================
 const SC = {};   // student cache
 async function sLoad(key, fn, force = false) { if (!force && SC[key] !== undefined) return SC[key]; SC[key] = await fn(); return SC[key]; }
@@ -971,25 +1387,43 @@ async function getGuide(g) {
   return null;
 }
 
-function studentStart() { Object.keys(SC).forEach(k => delete SC[k]); sNav('home'); }
+function studentStart() {
+  Object.keys(SC).forEach(k => delete SC[k]);
+  S.thread = null;
+  // live: my chat thread (for the unread dot)
+  try { listen('global', D('chats/' + S.sid), snap => { S.thread = snap.exists() ? snap.data() : null; markChatDot(); }); } catch (e) { console.warn(e); }
+  sNav('home');
+}
+const sRev = f => sLoad('rev', () => loadRevision(myGrade()), f);
+const sRes = f => sLoad('res', async () => (await listC('resources')).filter(r => gradeOf(r) === myGrade()), f);
+const sConf = f => sLoad('conf', async () => { try { return ((await getD('confidence/' + S.sid)) || {}).ratings || {}; } catch { return {}; } }, f);
+function chatUnread() { const t = S.thread; return !!t && (t.aAt || 0) > (t.sRead || 0); }
+function markChatDot() {
+  const b = $('.bottomnav [data-nav="chat"]'); if (b) b.classList.toggle('dot', chatUnread() && S.view !== 'chat');
+  const hc = $('#homechat'); if (hc) hc.classList.toggle('hidden', !chatUnread());
+}
 
 function sShell(tab, title, body, opts = {}) {
+  stopView();
   S.view = tab;
-  const tabs = [['home', 'Home', ICON.home], ['tests', 'Tests', ICON.tests], ['res', 'Resources', ICON.book], ['guide', 'Exam Guide', ICON.guide], ['me', 'Profile', ICON.user]];
+  const tabs = [['home', 'Home', ICON.home], ['tests', 'Tests', ICON.tests], ['rev', 'Revise', ICON.rev], ['guide', 'Exam Guide', ICON.guide], ['chat', 'Chat', ICON.chat]];
   $('#app').innerHTML = `<div class="topbar">${opts.back ? `<button class="iconbtn" id="tbback">${ICON.back}</button>` : ''}
-    <div class="grow"><h1>${esc(title)}</h1>${opts.sub ? `<div class="sub">${esc(opts.sub)}</div>` : ''}</div></div>
+    <div class="grow"><h1>${esc(title)}</h1>${opts.sub ? `<div class="sub">${esc(opts.sub)}</div>` : ''}</div>
+    ${tab === 'me' ? '' : `<button class="tbav" id="tbme" aria-label="My profile">${avatarSvg(S.profile && S.profile.gender)}</button>`}</div>
     <div class="page" id="pg">${body}</div>
-    <nav class="bottomnav">${tabs.map(([k, l, i]) => `<button data-nav="${k}" class="${k === tab ? 'on' : ''}">${i}<span>${l}</span></button>`).join('')}</nav>`;
+    <nav class="bottomnav">${tabs.map(([k, l, i]) => `<button data-nav="${k}" class="${k === tab ? 'on' : ''} ${k === 'chat' && tab !== 'chat' && chatUnread() ? 'dot' : ''}">${i}<span>${l}</span></button>`).join('')}</nav>`;
   $$('[data-nav]').forEach(b => b.onclick = () => sNav(b.dataset.nav));
   if (opts.back) $('#tbback').onclick = opts.back;
+  if ($('#tbme')) $('#tbme').onclick = () => sNav('me');
   window.scrollTo(0, 0);
   return $('#pg');
 }
 function sNav(tab) {
   if (tab === 'home') return sHome();
   if (tab === 'tests') return sTestsView();
-  if (tab === 'res') return sResources();
+  if (tab === 'rev' || tab === 'res') return sRevise();
   if (tab === 'guide') return sGuide();
+  if (tab === 'chat') return sChat();
   if (tab === 'me') return sProfile();
 }
 
@@ -1006,20 +1440,27 @@ async function sHome() {
   const p = S.profile;
   const pg = sShell('home', APP_NAME, spinner());
   try {
-    const [anns, seen, tests, atts] = await Promise.all([sAnnouncements(), sSeen(), sTests(), sAttempts()]);
+    const [anns, seen, tests, atts, conf] = await Promise.all([sAnnouncements(), sSeen(), sTests(), sAttempts(), sConf()]);
+    const g = myGrade(); const nCh = chaptersOf(g).length;
+    const rated = Object.entries(conf).filter(([k]) => k.startsWith(g + '_')).map(([, v]) => v.s);
+    const avg = rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : 0;
     const doneTids = new Set(atts.map(a => a.tid));
     const prog = inProgressList();
     pg.innerHTML = `<div class="hero"><div class="avatar lg">${avatarSvg(p.gender)}</div><div class="grow">
         <div style="font-size:.85rem;opacity:.85">Welcome back</div><h2 style="color:#fff;margin:0">${esc(p.name || S.sid)}</h2>
         <div style="font-size:.85rem;opacity:.85">Class ${myGrade()}${p.school ? ' · ' + esc(p.school) : ''}</div></div></div>
+      <div id="homechat" class="card row ${chatUnread() ? '' : 'hidden'}" style="cursor:pointer;border-color:#c9cdf6;background:var(--sblue)"><div style="font-size:1.5rem">💬</div><div class="grow"><b>New message from your teacher</b><div class="small muted">Tap to open Chat</div></div><span class="muted">›</span></div>
       ${prog.length ? `<div class="sectiontitle">Continue</div>${prog.map(v => `<div class="card row" style="cursor:pointer" data-resume="${esc(v.tid)}">
         <div class="grow"><b>${esc(v.title || v.tid)}</b><div class="small muted">In progress · saved on this phone</div></div><span class="btn sm">Resume</span></div>`).join('')}` : ''}
       <div class="sectiontitle">Announcements</div>
       <div id="anns">${anns.length ? anns.map(a => annHtml(a, !seen.includes(a.id))).join('') : '<div class="card empty">No announcements yet.</div>'}</div>
       <div class="sectiontitle">Your progress</div>
       <div class="kpis"><button class="kpi" data-go="tests"><b>${tests.filter(t => doneTids.has(t.id)).length}/${tests.length}</b><span>tests attempted</span></button>
+      <button class="kpi" data-go="rev"><b>${rated.length ? avg.toFixed(1) + ' ★' : '☆'}</b><span>${rated.length ? `confidence · ${rated.length}${nCh ? '/' + nCh : ''} chapters rated` : 'Rate your confidence'}</span></button>
+      <button class="kpi" data-go="rev"><b>📐</b><span>Formulas & summaries</span></button>
       <button class="kpi" data-go="guide"><b>📘</b><span>Exam guide</span></button>
-      <button class="kpi" data-go="res"><b>📄</b><span>Notes & formulas</span></button></div>`;
+      <button class="kpi" data-go="chat"><b>💬</b><span>Ask your teacher</span></button></div>`;
+    $('#homechat').onclick = () => sNav('chat');
     $$('[data-go]', pg).forEach(b => b.onclick = () => sNav(b.dataset.go));
     $$('[data-resume]', pg).forEach(b => b.onclick = () => openTestIntro(b.dataset.resume));
     $$('.ann', pg).forEach(el => el.onclick = async () => {
@@ -1082,6 +1523,7 @@ async function openTestIntro(tid) {
   pg.innerHTML = `<div class="card"><h2>${esc(t.title)}</h2>
     <div class="chips"><span class="chip">${t.count} questions</span><span class="chip">${t.totalMarks} marks</span><span class="chip">${t.timer ? `⏱ ${t.timer} min` : 'No time limit'}</span></div>
     <p class="small muted" style="margin:10px 0 0">${TYPES.filter(k => tc[k]).map(k => `${TYPE_NAME[k]}: ${tc[k]}`).join(' · ')}</p></div>
+    ${t.kind === 'chapter' && t.chapter ? `<button class="btn sec block wrapbtn" id="revch">${ICON.rev} Revise Chapter ${esc(t.chapter)} formulas first</button><div class="sp"></div>` : ''}
     <div class="card"><h3>Before you start</h3><ul class="small" style="margin:0;padding-left:18px;color:var(--ink2)">
       <li>One question at a time. Use <b>Mark for review</b> and the <b>question grid</b> to jump around.</li>
       ${t.timer ? `<li>The timer keeps running even if you close the app. At zero the test submits by itself.</li>` : ''}
@@ -1096,6 +1538,7 @@ async function openTestIntro(tid) {
     runTest(t, nextN);
   };
   $$('[data-att]', pg).forEach(el => el.onclick = () => showResult(mine.find(a => a.id === el.dataset.att), t));
+  if ($('#revch')) $('#revch').onclick = () => sChapter(Number(t.chapter), 'f', () => openTestIntro(tid));
 }
 
 // ---------- TEST RUNNER ----------
@@ -1240,7 +1683,7 @@ async function showResult(att, test) {
       <div><div class="sv" style="font-size:1.2rem">${fmtDur(att.timeTaken || 0)}</div><div class="sl">Time taken${att.autoSubmitted ? ' (auto-submitted)' : ''}</div></div></div>
     ${sc.writtenCount && sc.pending ? `<div class="card" style="margin-top:12px"><h3>Send your working</h3><p class="small muted" style="margin:0 0 10px">Take clear photos of your written answers and send them to your teacher on WhatsApp. Your teacher will add the marks here.</p>
       ${wa ? `<a class="btn wa block" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${waText}">${ICON.wa} Send on WhatsApp</a>` : '<p class="small">Ask your teacher for their WhatsApp number.</p>'}</div>` : ''}
-    ${open ? '' : `<div class="card" style="margin-top:12px;background:var(--syellow);border-color:#f3e3a1"><h3>🔒 Solutions are locked</h3><p class="small" style="margin:0">Your teacher will open the correct answers and detailed solutions after checking your work. Come back to this page later.</p></div>`}
+    ${open ? '' : `<div class="card" style="margin-top:12px;background:var(--syellow);border-color:#f3e3a1"><h3>🔒 Solutions are locked</h3><p class="small" style="margin:0">Your teacher will open the correct answers and detailed solutions after checking your work. Come back to this page later.</p><div id="askbox">${askSolHtml(att.tid)}</div></div>`}
     <div class="chips" style="margin:16px 0 4px" id="flt"><button class="toggle on" data-f="all">All</button>${open ? '<button class="toggle" data-f="wrong">Wrong</button>' : ''}<button class="toggle" data-f="blank">Unanswered</button>${sc.writtenCount ? '<button class="toggle" data-f="written">Written</button>' : ''}</div>
     <div id="rqs"></div>`;
   const rows = (att.items || []).map((ai, idx) => {
@@ -1273,17 +1716,137 @@ async function showResult(att, test) {
     $$('.rq', box).forEach(r => r.classList.toggle('hidden', !r.classList.contains(b.dataset.f)));
   });
   $$('details.sol', box).forEach(d => d.addEventListener('toggle', () => { if (d.open) fillImages(d); }));
+  bindAskSol(att.tid, att.title);
+}
+// "Ask teacher to open solutions" -> a request message in Chat
+const reqKey = tid => `ssk_req_${S.sid}_${tid}`;
+function askSolHtml(tid) {
+  const at = lsGet(reqKey(tid));
+  return at ? `<p class="small" style="margin:10px 0 0">✓ You asked your teacher on ${fmtDate(at)}. You'll get a message in <b>Chat</b> when the solutions are open.</p>`
+    : `<button class="btn sm" id="askSol" style="margin-top:10px">${ICON.chat} Ask teacher to open solutions</button>`;
+}
+function bindAskSol(tid, title) {
+  const b = $('#askSol'); if (!b) return;
+  b.onclick = () => busy(b, async () => { await requestSolutions(tid, title); const box = $('#askbox'); if (box) box.innerHTML = askSolHtml(tid); });
+}
+async function requestSolutions(tid, title) {
+  await sendStudentMsg(`Please open the solutions for “${title}”.`, { kind: 'solreq', tid, title });
+  lsSet(reqKey(tid), now());
+  toast('Request sent to your teacher');
+}
+async function sendStudentMsg(text, extra = {}) {
+  const at = now();
+  const b = writeBatch(db);
+  b.set(D(`chats/${S.sid}/messages/${msgId()}`), clean({ from: 's', text, at, kind: extra.kind || 'text', tid: extra.tid, title: extra.title }));
+  b.set(D('chats/' + S.sid), { sid: S.sid, name: S.profile.name || S.sid, grade: myGrade(), lastAt: at, lastText: text.slice(0, 140), lastFrom: 's', sAt: at, sRead: at }, { merge: true });
+  await b.commit();
 }
 
-// ---------- RESOURCES ----------
-async function sResources() {
-  const pg = sShell('res', 'Resources', spinner(), { sub: `Class ${myGrade()}` });
+// ---------- CHAT ----------
+async function sChat() {
+  const pg = sShell('chat', 'Chat with your teacher', `<div class="chat" id="msgs">${spinner()}</div>`, { sub: 'Doubts, questions, solution requests' });
+  markChatDot();
+  const bar = document.createElement('div'); bar.className = 'chatbar';
+  bar.innerHTML = `<div class="in"><button class="btn sec sm" id="creq" title="Ask to open the solutions of a test">🔓</button>
+    <textarea class="input" id="ctext" rows="1" maxlength="1000" placeholder="Type your message…"></textarea><button class="btn" id="csend" aria-label="Send">${ICON.send}</button></div>`;
+  $('#app').appendChild(bar);
+  const place = () => { const nav = $('.bottomnav'); bar.style.bottom = (nav ? nav.offsetHeight : 0) + 'px'; pg.style.paddingBottom = (bar.offsetHeight + (nav ? nav.offsetHeight : 0) + 16) + 'px'; };
+  place(); window.addEventListener('resize', place, { once: true });
+  const ta = $('#ctext'), box = $('#msgs');
+  ta.oninput = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; place(); };
+  const reqCard = m => `🔓 <b>Asked to open solutions</b><br>${esc(m.title || '')}${m.done ? '<div class="tiny" style="margin-top:4px">✓ Opened by your teacher</div>' : ''}`;
+  let marked = 0;
+  listen('view', query(C(`chats/${S.sid}/messages`), orderBy('at', 'desc'), limit(150)), snap => {
+    const msgs = snapDocs(snap).reverse();
+    box.innerHTML = msgs.length ? bubblesHtml(msgs, 's', reqCard)
+      : `<div class="card empty" style="margin-top:20px">Say hello! 👋<br><span class="small">Ask a doubt about any question, or tap 🔓 to ask your teacher to open the solutions of a test.</span></div>`;
+    window.scrollTo(0, document.body.scrollHeight);
+    const t = S.thread;
+    if (t && (t.aAt || 0) > (t.sRead || 0) && t.aAt !== marked) { marked = t.aAt; updateDoc(D('chats/' + S.sid), { sRead: now() }).catch(e => console.warn(e)); }
+  }, () => { box.innerHTML = `<div class="card">Chat isn't switched on yet. Please tell your teacher to publish the new Firestore rules.</div>`; });
+  const send = () => busy($('#csend'), async () => {
+    const text = ta.value.trim(); if (!text) return;
+    await sendStudentMsg(text.slice(0, 1000)); ta.value = ''; ta.oninput();
+  });
+  $('#csend').onclick = send;
+  ta.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer:fine)').matches) { e.preventDefault(); send(); } };
+  $('#creq').onclick = async () => {
+    const [tests, atts] = await Promise.all([sTests(), sAttempts()]);
+    const firsts = atts.filter(a => a.n === 1);
+    const locked = firsts.filter(a => { const t = tests.find(x => x.id === a.tid); return !(a.solutionsOpen === true || (t && t.solutionsOpen === true)); });
+    modal(`<h3>Ask to open solutions</h3><p class="small muted">Choose a test you have submitted. Your teacher gets the request here in Chat.</p>
+      ${locked.length ? locked.map(a => `<div class="li" data-rq="${esc(a.tid)}"><div class="grow"><div class="t">${esc(a.title)}</div><div class="tiny muted">${lsGet(reqKey(a.tid)) ? 'Already asked on ' + fmtDate(lsGet(reqKey(a.tid))) : 'Submitted ' + fmtDate(a.submittedAt)}</div></div><span class="btn sm">Ask</span></div>`).join('')
+        : '<div class="empty">No locked tests. Solutions are open for every test you have submitted.</div>'}
+      <div class="sp"></div><button class="btn ghost block" data-c>Close</button>`, (m, close) => {
+      m.querySelector('[data-c]').onclick = close;
+      $$('[data-rq]', m).forEach(el => el.onclick = () => busy(null, async () => { const a = locked.find(x => x.tid === el.dataset.rq); close(); await requestSolutions(a.tid, a.title); }));
+    });
+  };
+}
+
+// ---------- REVISE (formulas, summary, notes, confidence) ----------
+async function sRevise() {
+  const g = myGrade();
+  const pg = sShell('rev', 'Revise', spinner(), { sub: `Class ${g} · formulas, summaries, notes` });
   try {
-    const list = (await sLoad('res', () => listC('resources'))).filter(r => gradeOf(r) === myGrade());
-    pg.innerHTML = resourcesHtml(list, false, myGrade());
-    bindResourceAccordion(pg);
+    const [rev, res, conf] = await Promise.all([sRev(), sRes(), sConf()]);
+    const used = [...Object.keys(rev).map(Number), ...res.map(r => Number(r.chapter))];
+    const nums = chaptersOf(g).length ? chapterNums(g, used) : [...new Set(used)].sort((a, b) => a - b);
+    if (!nums.length) { pg.innerHTML = `<div class="card empty">Your teacher hasn't added revision notes for Class ${g} yet.</div>`; return; }
+    const rated = nums.map(n => conf[confKey(g, n)]).filter(Boolean);
+    const avg = rated.length ? rated.reduce((a, c) => a + c.s, 0) / rated.length : 0;
+    pg.innerHTML = `<div class="card row"><div class="grow"><b>Your confidence</b><div class="small muted">${rated.length ? `${rated.length} of ${nums.length} chapters rated · average ${avg.toFixed(1)} ★` : 'Open a chapter and tap the stars to show how confident you feel.'}</div></div>${rated.length ? starsHtml(avg) : ''}</div>
+      <div class="card" style="padding:4px 14px">${nums.map(n => {
+        const r = rev[n]; const nr = res.filter(x => Number(x.chapter) === n).length; const c = conf[confKey(g, n)];
+        const info = [r && (r.formulas || []).length ? 'Formulas' : '', r && (r.summary || []).length ? 'Summary' : '', nr ? `${nr} file${nr > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
+        return `<div class="li" data-ch="${n}"><div class="grow"><div class="t">${n}. ${esc(chName(g, n))}</div><div class="small muted">${info || 'Nothing added yet'}</div></div>
+          <div class="right">${c ? starsHtml(c.s, 'sm') : '<span class="tiny muted">Not rated</span>'}</div><span class="muted">›</span></div>`;
+      }).join('')}</div>`;
+    $$('[data-ch]', pg).forEach(el => el.onclick = () => sChapter(Number(el.dataset.ch)));
   } catch (e) { pg.innerHTML = `<div class="card">${esc(errMsg(e))}</div>`; }
 }
+async function sChapter(n, tab, back) {
+  const g = myGrade();
+  const pg = sShell('rev', `${n}. ${chName(g, n)}`, spinner(), { back: back || (() => sRevise()), sub: `Class ${g} · Chapter ${n}` });
+  try {
+    const [rev, res, conf, tests] = await Promise.all([sRev(), sRes(), sConf(), sTests().catch(() => [])]);
+    const r = rev[n] || {};
+    const files = res.filter(x => Number(x.chapter) === n).sort((a, b) => resTypeOrder(a.type) - resTypeOrder(b.type) || (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(b.title));
+    const segs = [['f', 'Formulas', (r.formulas || []).length], ['s', 'Summary', (r.summary || []).length], ['n', 'Notes & PDFs', files.length]];
+    tab = tab || (segs.find(x => x[2]) || segs[0])[0];
+    const ct = tests.find(t => t.kind === 'chapter' && Number(t.chapter) === n);
+    let cur = (conf[confKey(g, n)] || {}).s || 0;
+    pg.innerHTML = `<div class="card conf"><div class="small" style="font-weight:600">How confident are you in this chapter now?</div>
+        <div class="starin" id="stin">${[1, 2, 3, 4, 5].map(i => `<button data-s="${i}" aria-label="${i} star${i > 1 ? 's' : ''}">★</button>`).join('')}</div>
+        <div class="small muted" id="stlab"></div></div>
+      <div class="seg">${segs.map(([k, l]) => `<button data-seg="${k}">${l}</button>`).join('')}</div><div id="rc"></div>
+      ${ct ? `<div class="sp"></div><button class="btn sec block wrapbtn" id="prac">${ICON.tests} Practise: ${esc(ct.title)}</button>` : ''}`;
+    const paint = () => { $$('#stin button').forEach(b => b.classList.toggle('on', Number(b.dataset.s) <= cur)); $('#stlab').textContent = CONF_LABEL[cur]; };
+    paint();
+    $$('#stin button').forEach(b => b.onclick = async () => {
+      cur = Number(b.dataset.s); paint();
+      try {
+        const ratings = { ...(await sConf()), [confKey(g, n)]: { s: cur, at: now() } };
+        await setDoc(D('confidence/' + S.sid), { sid: S.sid, grade: g, ratings, updatedAt: now() });
+        SC.conf = ratings; toast(`Saved: ${CONF_LABEL[cur]}`);
+      } catch (e) { toast(errMsg(e), 4000); }
+    });
+    const draw = k => {
+      $$('[data-seg]', pg).forEach(b => b.classList.toggle('on', b.dataset.seg === k));
+      const box = $('#rc');
+      if (k === 'f') box.innerHTML = (r.formulas || []).length ? `<div class="fgrid">${revFormulasHtml(r.formulas)}</div>` : '<div class="card empty">No formulas added yet.</div>';
+      if (k === 's') box.innerHTML = (r.summary || []).length ? `<div class="card">${revSummaryHtml(r.summary)}</div>` : '<div class="card empty">No summary added yet.</div>';
+      if (k === 'n') box.innerHTML = files.length ? `<div class="card">${[...new Set(files.map(f => f.type))].map(tp => `<div style="margin-bottom:12px"><div class="small" style="font-weight:700;color:var(--ink2);margin-bottom:6px">${esc(tp)}</div>
+          <div class="row wrap">${files.filter(f => f.type === tp).map(f => `<a class="btn sec sm" target="_blank" rel="noopener" href="${esc(f.link)}">${ICON.link} ${esc(f.title)}</a>`).join('')}</div></div>`).join('')}</div>` : '<div class="card empty">No notes or PDFs added yet.</div>';
+      fillImages(box);
+    };
+    $$('[data-seg]', pg).forEach(b => b.onclick = () => draw(b.dataset.seg));
+    draw(tab);
+    if ($('#prac')) $('#prac').onclick = () => openTestIntro(ct.id);
+  } catch (e) { pg.innerHTML = `<div class="card">${esc(errMsg(e))}</div>`; }
+}
+
+// ---------- RESOURCES (shared with the admin Resources page) ----------
 function resTypeOrder(t) { const i = RES_TYPES.indexOf(t); return i < 0 ? 10 : i; }
 function resourcesHtml(list, admin, g) {
   const nums = chaptersOf(g).length ? chapterNums(g, list.map(r => r.chapter)) : [...new Set(list.map(r => Number(r.chapter)))].sort((a, b) => a - b);
@@ -1338,6 +1901,14 @@ const aKeys = f => aLoad('keys', async () => { const m = {}; (await listC('testK
 const aStudents = f => aLoad('students', async () => (await listC('students')).sort((a, b) => gradeOf(a) - gradeOf(b) || String(a.name || a.id).localeCompare(b.name || b.id)), f);
 const aAtts = f => aLoad('atts', () => listC('attempts'), f);
 const aRes = f => aLoad('res', () => listC('resources'), f);
+const aConf = f => aLoad('conf', async () => { const m = {}; try { (await listC('confidence')).forEach(c => m[c.id] = c.ratings || {}); } catch (e) { console.warn(e); } return m; }, f);
+const unreadChats = () => (AC.chats || []).filter(t => (t.sAt || 0) > (t.aRead || 0));
+function markAdminDot() {
+  const n = unreadChats().length;
+  const mb = $('#menu'); if (mb) mb.classList.toggle('dot', n > 0);
+  const k = $('#kmsg'); if (k) k.textContent = n;
+  const d = $('.drawer [data-a="messages"] .badge'); if (d) { d.textContent = n; d.classList.toggle('hidden', !n); }
+}
 const aAnns = f => aLoad('anns', async () => (await listC('announcements')).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || 0) - (a.createdAt || 0)), f);
 // Admin saves are split into small batches so each stays inside Firestore's rules lookup limit.
 async function commitOps(ops, size = 15) {
@@ -1356,6 +1927,8 @@ const studentGrade = s => gradeOf(s);
 
 async function adminStart() {
   Object.keys(AC).forEach(k => delete AC[k]); AC.g = 10;
+  // live list of chat threads (unread badge)
+  try { listen('global', C('chats'), snap => { AC.chats = snapDocs(snap); AC.chatsOk = true; markAdminDot(); if (S.view === 'admin-messages' && AC.redrawThreads) AC.redrawThreads(); }, () => { AC.chatsOk = false; }); } catch (e) { console.warn(e); }
   if ((S.settings.schema || 0) < 2) {
     try { await migrateV2(); }
     catch (e) {
@@ -1393,19 +1966,21 @@ async function migrateV2() {
   } catch (e) { close(); throw e; }
 }
 
-const ANAV = [['dash', 'Dashboard', ICON.home], ['students', 'Students', ICON.users], ['results', 'Results & export', ICON.chart], ['marking', 'Marking', ICON.pen],
-  ['tests', 'Tests', ICON.tests], ['questions', 'Question bank', ICON.q], ['classes', 'Classes & chapters', ICON.book], ['resources', 'Resources', ICON.link], ['anns', 'Announcements', ICON.bell],
+const ANAV = [['dash', 'Dashboard', ICON.home], ['messages', 'Messages', ICON.chat], ['students', 'Students', ICON.users], ['results', 'Results & export', ICON.chart], ['marking', 'Marking', ICON.pen],
+  ['tests', 'Tests', ICON.tests], ['questions', 'Question bank', ICON.q], ['revision', 'Revision notes', ICON.rev], ['classes', 'Classes & chapters', ICON.book], ['resources', 'Resources', ICON.link], ['anns', 'Announcements', ICON.bell],
   ['guide', 'Exam Guide', ICON.guide], ['settings', 'Settings', ICON.gear]];
 function aShell(sec, title, body, opts = {}) {
+  stopView();
   S.view = 'admin-' + sec;
   $('#app').innerHTML = `<div class="topbar">${opts.back ? `<button class="iconbtn" id="tbback">${ICON.back}</button>` : `<button class="iconbtn" id="menu">${ICON.menu}</button>`}
     <div class="grow"><h1>${esc(title)}</h1><div class="sub">Admin · ${APP_NAME}</div></div>${opts.action || ''}</div>
     <div class="page ${opts.wide ? 'wide' : ''}" id="pg">${body}</div>`;
+  markAdminDot();
   if (opts.back) $('#tbback').onclick = opts.back;
   else $('#menu').onclick = () => {
     const d = document.createElement('div'); d.className = 'drawer';
     d.innerHTML = `<div class="panel"><div class="brandmark" style="margin:4px 8px 14px"><div class="logo">∑</div><div><b>${APP_NAME}</b><div class="tiny muted">Signed in as ${esc(S.adminDoc.loginId || '')}</div></div></div>
-      ${ANAV.map(([k, l, i]) => `<button data-a="${k}" class="${k === sec ? 'on' : ''}">${i}${l}</button>`).join('')}<button data-a="out">${ICON.out}Sign out</button></div>`;
+      ${ANAV.map(([k, l, i]) => `<button data-a="${k}" class="${k === sec ? 'on' : ''}">${i}${l}${k === 'messages' ? `<span class="badge ${unreadChats().length ? '' : 'hidden'}">${unreadChats().length}</span>` : ''}</button>`).join('')}<button data-a="out">${ICON.out}Sign out</button></div>`;
     document.body.appendChild(d);
     d.onclick = e => { const b = e.target.closest('[data-a]'); if (e.target === d || b) d.remove(); if (b) b.dataset.a === 'out' ? doSignOut() : aNav(b.dataset.a); };
   };
@@ -1413,7 +1988,7 @@ function aShell(sec, title, body, opts = {}) {
   return $('#pg');
 }
 function aNav(sec, arg) {
-  const f = { dash: aDash, students: aStudentsView, results: aResults, marking: aMarking, tests: aTestsView, questions: aQuestionsView, classes: aClasses,
+  const f = { dash: aDash, messages: aMessages, revision: aRevision, students: aStudentsView, results: aResults, marking: aMarking, tests: aTestsView, questions: aQuestionsView, classes: aClasses,
     resources: aResources, anns: aAnnsView, guide: aGuideEditor, settings: aSettings }[sec];
   return f(arg);
 }
@@ -1437,13 +2012,16 @@ async function aDash() {
       [!!(S.settings.whatsapp), 'Add your WhatsApp number', 'Students get a button to send you photos of their working.', 'settings']];
     pg.innerHTML = `${steps.some(s => !s[0]) ? `<div class="card"><h3>Getting started</h3>${steps.map(([done, t, d, go]) => `
         <div class="li" data-go="${go}"><span class="chip ${done ? 'g' : 'n'}">${done ? '✓' : '•'}</span><div class="grow"><div class="t">${t}</div><div class="small muted">${d}</div></div><span class="muted">›</span></div>`).join('')}</div>` : ''}
+      ${AC.chatsOk === false ? `<div class="err">Messages and confidence need the new Firestore rules. Paste and publish firestore-rules.txt, then reload.</div>` : ''}
       <div class="sectiontitle">Overview</div>
       <div class="kpis">
+        <button class="kpi" data-go="messages"><b id="kmsg">${unreadChats().length}</b><span>Unread messages</span></button>
         <button class="kpi" data-go="students"><b>${studs.length}</b><span>Students${byClass.length ? ' · ' + byClass.map(([g, n]) => `C${g}: ${n}`).join(', ') : ''}</span></button>
         <button class="kpi" data-go="marking"><b>${pend}</b><span>Attempts to mark</span></button>
         <button class="kpi" data-go="results"><b>${atts.length}</b><span>Attempts submitted</span></button>
         <button class="kpi" data-go="tests"><b>${tests.length}</b><span>Tests</span></button>
         <button class="kpi" data-go="questions"><b>${nq}</b><span>Questions</span></button>
+        <button class="kpi" data-go="revision"><b>📐</b><span>Revision notes</span></button>
         <button class="kpi" data-go="classes"><b>📚</b><span>Classes & chapters</span></button>
         <button class="kpi" data-go="anns"><b>📣</b><span>Announcements</span></button>
         <button class="kpi" data-go="resources"><b>📄</b><span>Resources</span></button>
@@ -1531,25 +2109,30 @@ function aStudentForm(s) {
 async function aStudentDetail(sid) {
   const pg = aShell('students', 'Student', spinner(), { back: () => aStudentsView() });
   guard(pg, async () => {
-    const [studs, atts, keys] = await Promise.all([aStudents(), aAtts(), aKeys()]);
+    const [studs, atts, keys, confAll] = await Promise.all([aStudents(), aAtts(), aKeys(), aConf(true)]);
     const s = studs.find(x => x.id === sid) || await getD('students/' + sid);
     if (!s) { pg.innerHTML = '<div class="card empty">Student not found.</div>'; return; }
     const g = studentGrade(s);
     const mine = atts.filter(a => a.sid === sid).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
     const perCh = chapterWise(officialAttempts(mine).filter(a => gradeOf(a) === g || a.grade == null), keys);
+    const conf = confAll[sid] || {};
+    const confChs = Object.keys(conf).filter(k => k.startsWith(g + '_')).map(k => Number(k.split('_')[1]));
+    const chRows = [...new Set([...Object.keys(perCh).map(Number).filter(c => perCh[c] && perCh[c].max), ...confChs])].sort((x, y) => x - y);
     const row = (l, v) => `<div><div class="tiny muted">${l}</div><div>${esc(v || '–')}</div></div>`;
     pg.innerHTML = `<div class="card"><div class="row"><div class="avatar lg">${avatarSvg(s.gender)}</div><div class="grow"><h2 style="margin:0">${esc(s.name)}</h2><div class="muted">Class ${g} · ID: ${esc(s.id)}</div></div></div>
       <div class="grid2" style="margin-top:12px">${row('Date of birth', fmtDob(s.dob))}${row('School', s.school)}${row('Mobile', s.mobile)}${row('Email', s.email)}${row('Address', s.address)}</div>
-      <div class="row wrap" style="margin-top:14px"><button class="btn sec sm" id="ed">Edit</button><button class="btn sec sm" id="rp">Reset password</button><button class="btn danger sm" id="del">Delete</button></div></div>
-      <div class="sectiontitle">Chapter-wise performance (official attempts, Class ${g})</div>
-      <div class="card">${Object.keys(perCh).length ? Object.keys(perCh).map(Number).sort((x, y) => x - y).map(c => { const v = perCh[c]; if (!v || !v.max) return ''; const p = pct(v.got, v.max);
-        return `<div style="margin:8px 0"><div class="row small"><span class="grow">${c}. ${esc(chName(g, c))}</span><b>${p}%</b><span class="muted">${fmtNum(v.got)}/${v.max}</span></div><div class="bar"><div style="width:${p}%;background:${p >= 75 ? 'var(--green)' : p >= 50 ? 'var(--amber)' : 'var(--red)'}"></div></div></div>`; }).join('')
-        : '<div class="empty">No marked attempts yet.</div>'}</div>
+      <div class="row wrap" style="margin-top:14px"><button class="btn sm" id="msg">${ICON.chat} Message</button><button class="btn sec sm" id="ed">Edit</button><button class="btn sec sm" id="rp">Reset password</button><button class="btn danger sm" id="del">Delete</button></div></div>
+      <div class="sectiontitle">Chapter-wise: score (official attempts) and the student's own confidence</div>
+      <div class="card">${chRows.length ? chRows.map(c => { const v = perCh[c]; const cf = conf[confKey(g, c)]; const p = v && v.max ? pct(v.got, v.max) : null;
+        return `<div style="margin:10px 0"><div class="row small"><span class="grow">${c}. ${esc(chName(g, c))}</span>${cf ? starsHtml(cf.s, 'sm') : '<span class="tiny muted">not rated</span>'}${p != null ? `<b style="min-width:42px;text-align:right">${p}%</b>` : '<span class="tiny muted" style="min-width:42px;text-align:right">no test</span>'}</div>
+          ${p != null ? `<div class="bar"><div style="width:${p}%;background:${p >= 75 ? 'var(--green)' : p >= 50 ? 'var(--amber)' : 'var(--red)'}"></div></div>` : ''}</div>`; }).join('')
+        : '<div class="empty">No marked attempts or confidence ratings yet.</div>'}</div>
       <div class="sectiontitle">Attempts</div>
       <div class="card" style="padding:4px 14px">${mine.length ? mine.map(a => { const r = scoreAttempt(a, keys[a.tid]);
         return `<div class="li" data-att="${esc(a.id)}"><div class="grow"><div class="t">${esc(a.title)}</div><div class="small muted">Attempt ${a.n}${a.n === 1 ? ' (official)' : ' (practice)'} · ${fmtDate(a.submittedAt)}</div></div>
         <div class="right"><b>${fmtNum(r.total)}/${r.max}</b>${r.pending ? `<div class="tiny" style="color:var(--purple)">${r.pending} to mark</div>` : ''}</div></div>`; }).join('') : '<div class="empty">No attempts yet.</div>'}</div>`;
     $('#ed').onclick = () => aStudentForm(s);
+    $('#msg').onclick = () => aThread(s.id, () => aStudentDetail(sid));
     $('#rp').onclick = () => resetStudentPassword(s);
     $('#del').onclick = () => deleteStudent(s);
     $$('[data-att]', pg).forEach(el => el.onclick = () => aAttempt(el.dataset.att, () => aStudentDetail(sid)));
@@ -1580,7 +2163,9 @@ async function deleteStudent(s) {
   if (!(await confirmBox(`Delete ${s.name}?`, 'They will no longer be able to sign in. Their past results stay in your exports and backups.', 'Delete', true))) return;
   await busy(null, async () => {
     const inbox = await listC(`students/${s.id}/inbox`).catch(() => []);
-    const ops = [['delete', 'students/' + s.id], ['delete', 'logins/' + s.id], ['delete', `students/${s.id}/private/seen`]];
+    const msgs = await listC(`chats/${s.id}/messages`).catch(() => []);
+    const ops = [['delete', 'students/' + s.id], ['delete', 'logins/' + s.id], ['delete', `students/${s.id}/private/seen`], ['delete', 'chats/' + s.id], ['delete', 'confidence/' + s.id]];
+    msgs.forEach(m => ops.push(['delete', `chats/${s.id}/messages/${m.id}`]));
     if (s.uid) ops.push(['delete', 'users/' + s.uid]);
     inbox.forEach(x => ops.push(['delete', `students/${s.id}/inbox/${x.id}`]));
     await commitOps(ops); AC.students = undefined; toast('Student deleted'); aStudentsView();
@@ -1663,9 +2248,9 @@ async function aMarking() {
 async function aResults() {
   const pg = aShell('results', 'Results & export', spinner(), { wide: true });
   guard(pg, async () => {
-    const [atts, keys, tests, studs] = await Promise.all([aAtts(true), aKeys(), aTests(), aStudents()]);
+    const [atts, keys, tests, studs, confAll] = await Promise.all([aAtts(true), aKeys(), aTests(), aStudents(), aConf(true)]);
     const off = officialAttempts(atts);
-    let mode = 'tests', g = AC.g || 10;
+    let mode = AC.rmode || 'tests', g = AC.g || 10;
     const draw = () => {
       const cs = studs.filter(s => studentGrade(s) === g);
       const offG = off.filter(a => cs.some(s => s.id === a.sid));
@@ -1677,6 +2262,14 @@ async function aResults() {
             const a = offG.find(x => x.sid === s.id && x.tid === t.id); if (!a) return '<td class="num muted">–</td>';
             const r = scoreAttempt(a, keys[t.id]);
             return `<td class="num" style="cursor:pointer" data-att="${esc(a.id)}"><b>${fmtNum(r.total)}</b>/${r.max}${r.pending ? '<span style="color:var(--purple)">*</span>' : ''}</td>`; }).join('')}</tr>`).join('')}</table>`;
+      } else if (mode === 'conf') {
+        const chs = confChapters(g, cs, confAll);
+        const avgOf = c => { const v = cs.map(s => (confAll[s.id] || {})[confKey(g, c)]).filter(Boolean).map(x => x.s); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+        table = chs.length ? `<table class="tbl"><tr><th>Student</th>${chs.map(c => `<th class="num" title="${esc(chName(g, c))}">Ch ${c}</th>`).join('')}</tr>
+          ${cs.map(s => `<tr><td><b>${esc(s.name)}</b><div class="tiny muted">${esc(s.id)}</div></td>${chs.map(c => { const r = (confAll[s.id] || {})[confKey(g, c)];
+            return r ? `<td class="num" style="background:${CONF_BG[r.s]}">${r.s}★</td>` : '<td class="num muted">–</td>'; }).join('')}</tr>`).join('')}
+          <tr><td><b>Class average</b></td>${chs.map(c => { const a = avgOf(c); return `<td class="num"><b>${a == null ? '–' : a.toFixed(1) + '★'}</b></td>`; }).join('')}</tr></table>`
+          : '<div class="empty">No student has rated a chapter yet. Students rate chapters in Revise → a chapter → the stars.</div>';
       } else {
         const chs = chapterNums(g, offG.flatMap(a => (a.items || []).map(i => i.chapter))).filter(c => offG.some(a => (a.items || []).some(i => Number(i.chapter) === c)) || c <= chaptersOf(g).length);
         table = `<table class="tbl"><tr><th>Student</th>${chs.map(c => `<th class="num" title="${esc(chName(g, c))}">Ch ${c}</th>`).join('')}<th class="num">Overall</th></tr>
@@ -1684,18 +2277,32 @@ async function aResults() {
             return `<tr><td><b>${esc(s.name)}</b><div class="tiny muted">${esc(s.id)}</div></td>${chs.map(c => { const v = pc[c]; if (!v || !v.max) return '<td class="num muted">–</td>'; G += v.got; M += v.max; const p = pct(v.got, v.max);
               return `<td class="num" style="background:${p >= 75 ? '#e3f6ec' : p >= 50 ? '#fdf3d8' : '#fde6e6'}">${p}%</td>`; }).join('')}<td class="num"><b>${M ? pct(G, M) + '%' : '–'}</b></td></tr>`; }).join('')}</table>`;
       }
-      pg.innerHTML = `${gradeChips(g)}<div class="row wrap"><button class="toggle ${mode === 'tests' ? 'on' : ''}" data-m="tests">Scores by test</button><button class="toggle ${mode === 'ch' ? 'on' : ''}" data-m="ch">Chapter-wise %</button>
-        <span class="grow"></span><button class="btn sm" id="x1">⬇ All results (CSV)</button><button class="btn sec sm" id="x2">⬇ Class ${g} chapter-wise (CSV)</button></div>
-        <p class="tiny muted">Class ${g}, official (first) attempts only. * = written questions not yet marked. Tap a score to open the attempt. CSV files open in Excel and Google Sheets.</p>
+      pg.innerHTML = `${gradeChips(g)}<div class="row wrap"><button class="toggle ${mode === 'tests' ? 'on' : ''}" data-m="tests">Scores by test</button><button class="toggle ${mode === 'ch' ? 'on' : ''}" data-m="ch">Chapter-wise %</button><button class="toggle ${mode === 'conf' ? 'on' : ''}" data-m="conf">Confidence ★</button>
+        <span class="grow"></span><button class="btn sm" id="x1">⬇ All results (CSV)</button><button class="btn sec sm" id="x2">⬇ Class ${g} chapter-wise (CSV)</button><button class="btn sec sm" id="x3">⬇ Class ${g} confidence (CSV)</button></div>
+        <p class="tiny muted">${mode === 'conf' ? `Class ${g}: how confident each student says they are, 1–5 stars, rated in Revise. Compare with Chapter-wise % to spot over- or under-confidence.` : `Class ${g}, official (first) attempts only. * = written questions not yet marked. Tap a score to open the attempt.`} CSV files open in Excel and Google Sheets.</p>
         <div class="tblwrap">${cs.length ? table : `<div class="empty">No students in Class ${g} yet.</div>`}</div>`;
       bindGradeChips(pg, v => { g = AC.g = v; draw(); });
-      $$('[data-m]', pg).forEach(b => b.onclick = () => { mode = b.dataset.m; draw(); });
+      $$('[data-m]', pg).forEach(b => b.onclick = () => { mode = AC.rmode = b.dataset.m; draw(); });
+      $('#x3').onclick = () => exportConfidence(studs, confAll, g);
       $$('[data-att]', pg).forEach(c => c.onclick = () => aAttempt(c.dataset.att, () => aResults()));
       $('#x1').onclick = () => exportResults(atts, keys, studs);
       $('#x2').onclick = () => exportChapterwise(off, keys, studs, g);
     };
     draw();
   });
+}
+const CONF_BG = ['', '#fde6e6', '#fdeedd', '#fdf3d8', '#e9f6e2', '#d8f1e4'];
+function confChapters(g, cs, confAll) {
+  const used = new Set(); cs.forEach(s => Object.keys(confAll[s.id] || {}).forEach(k => { const [gg, c] = k.split('_'); if (Number(gg) === g) used.add(Number(c)); }));
+  return chapterNums(g, [...used]).filter(c => used.has(c) || c <= chaptersOf(g).length);
+}
+function exportConfidence(studs, confAll, g) {
+  const cs = studs.filter(s => studentGrade(s) === g);
+  const chs = confChapters(g, cs, confAll);
+  const rows = [['Student ID', 'Name', ...chs.map(c => `Ch ${c} ${chName(g, c)} (stars)`), 'Average']];
+  cs.forEach(s => { const r = confAll[s.id] || {}; const v = chs.map(c => (r[confKey(g, c)] || {}).s || '');
+    const got = v.filter(x => x !== ''); rows.push([s.id, s.name, ...v, got.length ? (got.reduce((a, b) => a + b, 0) / got.length).toFixed(1) : '']); });
+  download(`confidence-class${g}-${stamp()}.csv`, csv(rows), 'text/csv;charset=utf-8'); toast('Confidence exported');
 }
 function chapterWise(atts, keys) {
   const out = {};
@@ -2441,21 +3048,170 @@ async function aSettings() {
   pg.innerHTML = `<div class="card"><h3>WhatsApp number</h3><p class="small muted">Students see a “Send on WhatsApp” button after a test with written questions. Use country code + number, e.g. 919876543210.</p>
       <div class="row"><input class="input grow" id="wa" inputmode="tel" value="${esc(S.settings.whatsapp || '')}" placeholder="91XXXXXXXXXX"><button class="btn" id="wasave">Save</button></div></div>
     <div class="card"><h3>Exports (open in Excel)</h3><p class="small muted">Backups are not available on the free Firebase plan, so download these regularly.</p>
-      <div class="row wrap"><button class="btn" id="ex1">⬇ All results (CSV)</button><button class="btn sec" id="ex2">⬇ Class ${AC.g || 10} chapter-wise (CSV)</button><button class="btn sec" id="ex4">⬇ Student list (CSV)</button><button class="btn sec" id="ex3">⬇ Full backup (JSON)</button></div></div>
+      <div class="row wrap"><button class="btn" id="ex1">⬇ All results (CSV)</button><button class="btn sec" id="ex5">⬇ Class ${AC.g || 10} confidence (CSV)</button><button class="btn sec" id="ex2">⬇ Class ${AC.g || 10} chapter-wise (CSV)</button><button class="btn sec" id="ex4">⬇ Student list (CSV)</button><button class="btn sec" id="ex3">⬇ Full backup (JSON)</button></div></div>
     <div class="card"><h3>Your admin login</h3><p class="small">Admin ID: <b>${esc(S.adminDoc.loginId || '')}</b></p><button class="btn sec" id="cpw">Change password</button></div>
     <button class="btn danger block" id="so">${ICON.out} Sign out</button>`;
   $('#wasave').onclick = () => busy($('#wasave'), async () => { const v = $('#wa').value.replace(/\D/g, ''); await setDoc(D('config/settings'), { ...S.settings, whatsapp: v, updatedAt: now() }); S.settings.whatsapp = v; toast('Saved'); });
   $('#ex1').onclick = () => busy($('#ex1'), async () => { const [atts, keys, studs] = await Promise.all([aAtts(true), aKeys(), aStudents()]); exportResults(atts, keys, studs); });
   $('#ex2').onclick = () => busy($('#ex2'), async () => { const [atts, keys, studs] = await Promise.all([aAtts(true), aKeys(), aStudents()]); exportChapterwise(officialAttempts(atts), keys, studs, AC.g || 10); });
   $('#ex4').onclick = () => busy($('#ex4'), async () => exportStudents(await aStudents(true)));
+  $('#ex5').onclick = () => busy($('#ex5'), async () => exportConfidence(await aStudents(), await aConf(true), AC.g || 10));
   $('#ex3').onclick = () => busy($('#ex3'), async () => {
-    const names = ['questions', 'tests', 'testKeys', 'testSolutions', 'students', 'attempts', 'resources', 'announcements', 'images', 'content', 'config'];
+    const names = ['questions', 'tests', 'testKeys', 'testSolutions', 'students', 'attempts', 'resources', 'announcements', 'images', 'content', 'config', 'revision', 'confidence', 'chats'];
     const out = { app: APP_NAME, exportedAt: new Date().toISOString() };
-    for (const n of names) out[n] = await listC(n);
+    for (const n of names) out[n] = await listC(n).catch(() => []);
+    out.chatMessages = {};
+    for (const t of out.chats) out.chatMessages[t.id] = await listC(`chats/${t.id}/messages`).catch(() => []);
     download(`maths-by-ssk-backup-${stamp()}.json`, JSON.stringify(out), 'application/json'); toast('Backup downloaded');
   });
   $('#cpw').onclick = changeOwnPassword;
   $('#so').onclick = doSignOut;
+}
+
+// ---------- MESSAGES (chat with students) ----------
+async function aMessages() {
+  const pg = aShell('messages', 'Messages', spinner(), { action: `<button class="btn sm" id="newm" style="background:var(--accent);color:#1d2140">+ New</button>` });
+  $('#newm').onclick = async () => {
+    const studs = await aStudents();
+    modal(`<h3>Message a student</h3><input class="input" id="ms" placeholder="Search name or ID"><div id="ml" style="max-height:50vh;overflow:auto;margin-top:8px"></div><div class="sp"></div><button class="btn ghost block" data-c>Close</button>`, (m, close) => {
+      const draw = f => { $('#ml', m).innerHTML = studs.filter(s => !f || (s.name + ' ' + s.id).toLowerCase().includes(f)).map(s => `<div class="li" data-s="${esc(s.id)}"><div class="avatar">${avatarSvg(s.gender)}</div><div class="grow"><div class="t">${esc(s.name)}</div><div class="tiny muted">Class ${studentGrade(s)} · ${esc(s.id)}</div></div></div>`).join('') || '<div class="empty">No students.</div>';
+        $$('[data-s]', m).forEach(el => el.onclick = () => { close(); aThread(el.dataset.s, () => aMessages()); }); };
+      $('#ms', m).oninput = e => draw(e.target.value.trim().toLowerCase()); m.querySelector('[data-c]').onclick = close; draw('');
+    });
+  };
+  guard(pg, async () => {
+    const studs = await aStudents();
+    let g = AC.mg || 'all';
+    const draw = () => {
+      if (AC.chatsOk === false) { pg.innerHTML = `<div class="card"><h3>Messages are not switched on yet</h3><p class="small">Paste and publish the new firestore-rules.txt in Firebase, then reload this page.</p></div>`; return; }
+      if (!AC.chats) { pg.innerHTML = spinner(); return; }
+      const list = AC.chats.filter(t => g === 'all' || gradeOf(studs.find(s => s.id === t.id) || t) === g).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+      pg.innerHTML = `${gradeChips(g, true)}<div class="card" style="padding:4px 14px">${list.length ? list.map(t => { const s = studs.find(x => x.id === t.id) || {}; const un = (t.sAt || 0) > (t.aRead || 0);
+        return `<div class="li" data-t="${esc(t.id)}"><div class="avatar">${avatarSvg(s.gender)}</div><div class="grow" style="min-width:0"><div class="t">${esc(s.name || t.name || t.id)} <span class="tiny muted">Class ${gradeOf(s.id ? s : t)}</span></div>
+          <div class="small ${un ? '' : 'muted'}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${un ? 'font-weight:600' : ''}">${t.lastFrom === 'a' ? 'You: ' : ''}${esc(t.lastText || '')}</div></div>
+          <div class="right"><div class="tiny muted">${fmtDayLabel(t.lastAt) === 'Today' ? fmtTime(t.lastAt) : fmtDayLabel(t.lastAt)}</div>${un ? '<span class="badge">New</span>' : ''}</div></div>`; }).join('')
+        : '<div class="empty">No messages yet. Students can write to you from the Chat tab, and you can start a chat with “+ New”.</div>'}</div>`;
+      bindGradeChips(pg, v => { g = AC.mg = v; draw(); });
+      $$('[data-t]', pg).forEach(el => el.onclick = () => aThread(el.dataset.t, () => aMessages()));
+    };
+    AC.redrawThreads = draw;
+    draw();
+  });
+}
+async function adminSend(sid, s, text, extra = {}) {
+  const at = now();
+  const b = writeBatch(db);
+  b.set(D(`chats/${sid}/messages/${msgId()}`), clean({ from: 'a', text, at, kind: 'text', ...extra }));
+  b.set(D('chats/' + sid), { sid, name: (s && s.name) || sid, grade: s ? studentGrade(s) : 10, lastAt: at, lastText: text.slice(0, 140), lastFrom: 'a', aAt: at, aRead: at }, { merge: true });
+  await b.commit();
+}
+async function aThread(sid, back) {
+  const studs = await aStudents();
+  const s = studs.find(x => x.id === sid) || { id: sid, name: sid };
+  const pg = aShell('messages', s.name || sid, `<div class="chat" id="msgs">${spinner()}</div>`, { back: back || (() => aMessages()) });
+  $('.topbar .sub').textContent = `Class ${studentGrade(s)} · ID: ${sid}`;
+  const bar = document.createElement('div'); bar.className = 'chatbar admin';
+  bar.innerHTML = `<div class="in"><textarea class="input" id="ctext" rows="1" maxlength="1000" placeholder="Reply to ${esc((s.name || sid).split(' ')[0])}…"></textarea><button class="btn" id="csend" aria-label="Send">${ICON.send}</button></div>`;
+  $('#app').appendChild(bar);
+  const place = () => { pg.style.paddingBottom = (bar.offsetHeight + 16) + 'px'; };
+  const ta = $('#ctext'), box = $('#msgs');
+  ta.oninput = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; place(); };
+  place();
+  const tests = await aTests();
+  const reqState = {};      // tid -> 'open' | 'locked' | 'none'
+  const reqCard = m => {
+    const st = reqState[m.tid];
+    const action = m.done || st === 'open' ? '<div class="tiny" style="margin-top:6px">✓ Solutions are open for this student</div>'
+      : st === 'none' ? '<div class="tiny" style="margin-top:6px">No submitted attempt found for this test.</div>'
+      : `<button class="btn green sm" style="margin-top:8px" data-opensol="${esc(m.tid)}" data-mid="${esc(m.id)}">🔓 Open solutions for ${esc((s.name || sid).split(' ')[0])}</button>`;
+    return `🔓 <b>Asked to open solutions</b><br>${esc(m.title || m.tid)}${action}`;
+  };
+  let marked = 0, msgs = [];
+  const paint = () => {
+    box.innerHTML = msgs.length ? bubblesHtml(msgs, 'a', reqCard) : '<div class="card empty" style="margin-top:20px">No messages yet. Write the first one below.</div>';
+    window.scrollTo(0, document.body.scrollHeight);
+    $$('[data-opensol]', box).forEach(b => b.onclick = () => busy(b, async () => {
+      const tid = b.dataset.opensol, t = tests.find(x => x.id === tid);
+      await updateDoc(D(`attempts/${sid}_${tid}_1`), { solutionsOpen: true });
+      await updateDoc(D(`chats/${sid}/messages/${b.dataset.mid}`), { done: true });
+      reqState[tid] = 'open'; AC.atts = undefined;
+      await adminSend(sid, s, `I've opened the solutions for “${t ? t.title : tid}”. Open the test to see them. ✓`);
+      toast('Solutions opened and student told');
+    }));
+  };
+  listen('view', query(C(`chats/${sid}/messages`), orderBy('at', 'desc'), limit(150)), async snap => {
+    msgs = snapDocs(snap).reverse();
+    const pending = [...new Set(msgs.filter(m => m.kind === 'solreq' && !m.done && !reqState[m.tid]).map(m => m.tid))];
+    for (const tid of pending) {
+      const a = await getD(`attempts/${sid}_${tid}_1`).catch(() => null); const t = tests.find(x => x.id === tid);
+      reqState[tid] = !a ? 'none' : (a.solutionsOpen === true || (t && t.solutionsOpen === true)) ? 'open' : 'locked';
+    }
+    paint();
+    const th = (AC.chats || []).find(x => x.id === sid);
+    const last = msgs.filter(m => m.from === 's').pop();
+    if (last && th && (th.aRead || 0) < last.at && marked !== last.at) { marked = last.at; updateDoc(D('chats/' + sid), { aRead: now() }).catch(e => console.warn(e)); }
+  }, () => { box.innerHTML = '<div class="card">Messages need the new Firestore rules. Paste and publish firestore-rules.txt, then reload.</div>'; });
+  const send = () => busy($('#csend'), async () => { const text = ta.value.trim(); if (!text) return; await adminSend(sid, s, text.slice(0, 1000)); ta.value = ''; ta.oninput(); });
+  $('#csend').onclick = send;
+  ta.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer:fine)').matches) { e.preventDefault(); send(); } };
+}
+
+// ---------- REVISION NOTES ----------
+async function aRevision() {
+  const pg = aShell('revision', 'Revision notes', spinner());
+  guard(pg, async () => {
+    let g = AC.g || 10;
+    const draw = async () => {
+      pg.innerHTML = gradeChips(g) + spinner();
+      bindGradeChips(pg, v => { g = AC.g = v; draw(); });
+      const docs = {}; (await listC('revision', where('grade', '==', g)).catch(() => [])).forEach(d => docs[d.chapter] = d);
+      const nums = chapterNums(g, Object.keys(docs).map(Number)).filter(n => n <= chaptersOf(g).length || docs[n]);
+      pg.innerHTML = `${gradeChips(g)}<div class="info small">Formulas and a summary for each chapter. Students see them in <b>Revise</b>, next to that chapter's notes and PDFs.${g === 10 ? ' Class 10 comes with ready notes for all 14 chapters; edit any of them.' : ''}</div>
+        ${nums.length ? `<div class="card" style="padding:4px 14px">${nums.map(n => { const d = docs[n]; const st = d ? ((d.formulas || []).length || (d.summary || []).length ? ['g', 'Edited'] : ['n', 'Empty']) : revDefault(g, n) ? ['', 'Ready (built-in)'] : ['n', 'Not added'];
+          return `<div class="li" data-ch="${n}"><div class="grow"><div class="t">${n}. ${esc(chName(g, n))}</div></div><span class="chip ${st[0]}">${st[1]}</span><span class="muted">›</span></div>`; }).join('')}</div>`
+          : `<div class="card empty">No chapters for Class ${g} yet. Add the chapter names first in <b>Classes & chapters</b>.<div class="sp"></div><button class="btn sec sm" id="goch">Open Classes & chapters</button></div>`}`;
+      bindGradeChips(pg, v => { g = AC.g = v; draw(); });
+      if ($('#goch')) $('#goch').onclick = () => aNav('classes');
+      $$('[data-ch]', pg).forEach(el => el.onclick = () => aRevEditor(g, Number(el.dataset.ch), docs[el.dataset.ch]));
+    };
+    await draw();
+  });
+}
+function aRevEditor(g, n, d) {
+  const base = d || revDefault(g, n) || { formulas: [], summary: [] };
+  const pg = aShell('revision', `Class ${g} · ${n}. ${chName(g, n)}`, '', { back: () => aRevision() });
+  pg.innerHTML = `<details class="sol"><summary>How to type ▾</summary><div class="small muted">One point per line. Start a line with <code># </code> for a small heading.
+      Maths goes between dollar signs, e.g. <code>$a_n = a + (n - 1)d$</code> or <code>$\\dfrac{1}{2}$</code>. Use <code>**double stars**</code> for bold.
+      A table: lines starting with <code>|</code>, e.g. <code>| Solid | Volume |</code>. A picture: “Add figure”.</div></details>
+    <div class="card"><label class="field"><span>Formulas (each line becomes a formula card)</span><textarea class="input code" id="rf" style="min-height:220px">${esc(blocksToText(base.formulas))}</textarea></label>
+      <label class="btn sec sm" style="cursor:pointer">🖼 Add figure<input type="file" accept="image/*" hidden data-addimg="rf"></label></div>
+    <div class="card"><label class="field"><span>Summary (each line becomes a bullet point)</span><textarea class="input code" id="rs" style="min-height:200px">${esc(blocksToText(base.summary))}</textarea></label>
+      <label class="btn sec sm" style="cursor:pointer">🖼 Add figure<input type="file" accept="image/*" hidden data-addimg="rs"></label></div>
+    <div class="card"><div class="row"><h3 class="grow">Preview (as students see it)</h3><button class="btn sec sm" id="rpv">Update preview</button></div><div id="pv"></div></div>
+    <button class="btn block" id="rsave">Save</button>
+    ${g === 10 && REV10[n] ? '<div class="sp"></div><button class="btn ghost block" id="rreset">Reset to the built-in notes</button>' : d ? '<div class="sp"></div><button class="btn danger block" id="rdel">Delete these notes</button>' : ''}`;
+  const preview = () => { const f = textToBlocks($('#rf').value), sm = textToBlocks($('#rs').value);
+    $('#pv').innerHTML = `<div class="sectiontitle">Formulas</div><div class="fgrid">${revFormulasHtml(f) || '<div class="muted small">None</div>'}</div><div class="sectiontitle">Summary</div>${revSummaryHtml(sm) || '<div class="muted small">None</div>'}`; fillImages($('#pv')); };
+  preview();
+  $('#rpv').onclick = preview;
+  $$('[data-addimg]', pg).forEach(inp => inp.onchange = () => busy(null, async () => {
+    const file = inp.files[0]; if (!file) return;
+    const data = await compressImage(file); const id = 'img_' + now().toString(36);
+    await setDoc(D('images/' + id), { data }); IMG[id] = data;
+    const ta = $('#' + inp.dataset.addimg); ta.value = ta.value.replace(/\s*$/, '') + `\n[img:${id}]`; preview(); toast('Figure added');
+  }));
+  $('#rsave').onclick = () => busy($('#rsave'), async () => {
+    await setDoc(D('revision/' + revId(g, n)), { grade: g, chapter: n, formulas: textToBlocks($('#rf').value), summary: textToBlocks($('#rs').value), updatedAt: now() });
+    toast('Saved ✓'); aRevision();
+  });
+  if ($('#rreset')) $('#rreset').onclick = async () => {
+    if (!(await confirmBox('Reset to the built-in notes?', 'Your edits to this chapter are replaced by the original notes.', 'Reset'))) return;
+    await busy(null, async () => { await deleteDoc(D('revision/' + revId(g, n))); toast('Reset'); aRevision(); });
+  };
+  if ($('#rdel')) $('#rdel').onclick = async () => {
+    if (!(await confirmBox('Delete these notes?', 'Students will see “nothing added yet” for this chapter.', 'Delete', true))) return;
+    await busy(null, async () => { await deleteDoc(D('revision/' + revId(g, n))); toast('Deleted'); aRevision(); });
+  };
 }
 
 </script>

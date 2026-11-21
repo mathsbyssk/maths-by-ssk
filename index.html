@@ -318,7 +318,8 @@ const firebaseConfig = {
 };
 const APP_NAME = 'Maths by SSK';
 const LOGIN_DOMAIN = 'maths-by-ssk.app';
-const CHAPTERS = ['', 'Real Numbers', 'Polynomials', 'Pair of Linear Equations in Two Variables', 'Quadratic Equations',
+const GRADES = [6, 7, 8, 9, 10, 11, 12];
+const CH10 = ['Real Numbers', 'Polynomials', 'Pair of Linear Equations in Two Variables', 'Quadratic Equations',
   'Arithmetic Progressions', 'Triangles', 'Coordinate Geometry', 'Introduction to Trigonometry',
   'Some Applications of Trigonometry', 'Circles', 'Areas Related to Circles', 'Surface Areas and Volumes', 'Statistics', 'Probability'];
 const TYPES = ['MCQ', 'VSA', 'SA', 'LA', 'CASE'];
@@ -332,7 +333,24 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 let secAuth = null;   // second Firebase app: lets the admin create student logins without being signed out
 
-const S = { user: null, role: null, sid: null, profile: null, settings: {}, adminDoc: null, busy: false, view: null };
+const S = { user: null, role: null, sid: null, profile: null, settings: {}, adminDoc: null, busy: false, view: null, grades: {} };
+
+// ================= CLASSES (grades) + CHAPTERS =================
+// Chapter lists live in config/grades {chapters: {"10": [...], ...}}; line N = chapter N.
+function gradeOf(x) { const g = Number(x && x.grade); return GRADES.includes(g) ? g : 10; }
+function chaptersOf(g) { const c = S.grades && S.grades[String(g)]; if (c && c.length) return c; return Number(g) === 10 ? CH10 : []; }
+function chName(g, n) { return chaptersOf(g)[Number(n) - 1] || `Chapter ${n}`; }
+function chapterNums(g, used = []) {      // chapter numbers to offer for a class
+  const named = chaptersOf(g).length;
+  const max = Math.max(named, ...used.map(Number).filter(Boolean), named ? 0 : 20);
+  return [...Array(max).keys()].map(i => i + 1);
+}
+function chapterOptions(g, sel, used = []) {
+  return chapterNums(g, used).map(n => `<option value="${n}" ${Number(sel) === n ? 'selected' : ''}>${n}. ${esc(chName(g, n))}</option>`).join('');
+}
+function gradeOptions(sel) { return GRADES.map(g => `<option value="${g}" ${Number(sel) === g ? 'selected' : ''}>Class ${g}</option>`).join(''); }
+async function loadGrades() { try { const d = await getD('config/grades'); S.grades = (d && d.chapters) || {}; } catch { S.grades = {}; } }
+function fmtDob(d) { if (!d) return ''; const x = new Date(d + 'T00:00:00'); return isNaN(x) ? d : x.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
 // ================= SMALL HELPERS =================
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -546,6 +564,7 @@ async function routeUser(u) {
     if (S.adminDoc && S.adminDoc.uid === u.uid) {
       S.role = 'admin';
       S.settings = (await getD('config/settings').catch(() => null)) || {};
+      await loadGrades();
       return adminStart();
     }
     const ud = await getD('users/' + u.uid);
@@ -554,6 +573,7 @@ async function routeUser(u) {
       S.profile = await getD('students/' + ud.sid);
       if (!S.profile) throw new Error('profile');
       S.settings = (await getD('config/settings').catch(() => null)) || {};
+      await loadGrades();
       return studentStart();
     }
     await signOut(auth);
@@ -569,7 +589,7 @@ async function showLogin(errText = '') {
   $('#app').innerHTML = `<div class="loginwrap">${spinner()}</div>`;
   let adminExists = true;
   try { adminExists = !!(await getD('config/admin')); } catch (e) { console.warn(e); }
-  const brand = `<div class="brandmark"><div class="logo">∑</div><div><h2 style="margin:0">${APP_NAME}</h2><div class="muted small">Class 10 Maths practice</div></div></div>`;
+  const brand = `<div class="brandmark"><div class="logo">∑</div><div><h2 style="margin:0">${APP_NAME}</h2><div class="muted small">Maths practice · Classes 6–12</div></div></div>`;
   if (!adminExists) {
     $('#app').innerHTML = `<div class="loginwrap"><div class="logincard">${brand}
       <div class="info"><b>First-time setup.</b> Create the admin login. Only do this once.</div>
@@ -647,7 +667,7 @@ async function changeOwnPassword() {
 }
 
 // ================= SCORING (shared by student + admin) =================
-// test items snapshot lives in the attempt; key = testKeys/{tid}.items
+// test items snapshot lives in the attempt; key = testKeys/{tid}.items (MCQ answers only)
 function scoreAttempt(att, key) {
   const r = { mcq: 0, mcqMax: 0, wr: 0, wrMax: 0, pending: 0, writtenCount: 0, perCh: {}, correct: 0, wrong: 0, blank: 0 };
   for (const it of att.items || []) {
@@ -675,7 +695,7 @@ function remapOptionLetters(text, order) {    // "Option (c)" in solution text -
 
 // ================= QUESTION VIEW (used by runner, results, admin preview) =================
 function questionHtml(item, opts = {}) {
-  const { order, chosen, reveal, answer, showParts = true } = opts;
+  const { order, chosen, reveal, answer, showParts = true, locked } = opts;
   let h = `<div class="qtext">${renderBlocks(item.stem)}</div>`;
   if (item.parts && item.parts.length && showParts) {
     h += `<ul class="parts qtext">${item.parts.map(p => `<li>(${esc(p.label)}) ${inlineRich(p.x)} <span class="pm">[${esc(p.marks)}]</span></li>`).join('')}</ul>`;
@@ -686,7 +706,7 @@ function questionHtml(item, opts = {}) {
       let cls = 'opt';
       if (reveal) { if (orig === answer) cls += ' right'; else if (orig === chosen) cls += ' wrong'; }
       else if (orig === chosen) cls += ' sel';
-      return `<button class="${cls}" data-opt="${orig}" ${reveal ? 'disabled' : ''}><span class="L">${'abcd'[pos]}</span><span class="ot qtext">${inlineRich(item.options[orig])}</span></button>`;
+      return `<button class="${cls}" data-opt="${orig}" ${reveal || locked ? 'disabled' : ''}><span class="L">${'abcd'[pos]}</span><span class="ot qtext">${inlineRich(item.options[orig])}</span></button>`;
     }).join('');
   }
   return h;
@@ -922,19 +942,33 @@ function renderGuidePart(g, idx) {
 // ================= STUDENT =================
 const SC = {};   // student cache
 async function sLoad(key, fn, force = false) { if (!force && SC[key] !== undefined) return SC[key]; SC[key] = await fn(); return SC[key]; }
-const sTests = (f) => sLoad('tests', async () => (await listC('tests', where('published', '==', true))).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || String(a.title).localeCompare(b.title)), f);
+const myGrade = () => gradeOf(S.profile);
+const sortTests = list => list.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || String(a.title).localeCompare(b.title));
+const sTests = (f) => sLoad('tests', async () => {
+  let list = await listC('tests', where('grade', '==', myGrade()));
+  if (!list.length && myGrade() === 10) list = (await listC('tests', where('published', '==', true))).filter(t => t.grade == null);   // data from before classes existed
+  return sortTests(list.filter(t => t.published !== false));
+}, f);
 const sAttempts = (f) => sLoad('attempts', () => listC('attempts', where('sid', '==', S.sid)), f);
 const sSeen = (f) => sLoad('seen', async () => ((await getD(`students/${S.sid}/private/seen`)) || {}).ids || [], f);
 async function sAnnouncements(force) {
   return sLoad('ann', async () => {
-    const [pub, mine] = await Promise.all([listC('announcements', where('audience', '==', 'all')), listC(`students/${S.sid}/inbox`).catch(() => [])]);
-    const all = [...pub, ...mine];
+    const [pub, cls, mine] = await Promise.all([
+      listC('announcements', where('audience', '==', 'all')),
+      listC('announcements', where('audience', '==', 'g' + myGrade())).catch(() => []),
+      listC(`students/${S.sid}/inbox`).catch(() => [])]);
+    const all = [...pub, ...cls, ...mine];
     return all.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || 0) - (a.createdAt || 0));
   }, force);
 }
-async function getGuide() {
-  try { const d = await getD('content/examGuide'); if (d && d.json) return JSON.parse(d.json); } catch (e) { console.warn(e); }
-  return GUIDE_DEFAULT;
+// Exam Guide per class: content/guide_g{N}; Class 10 falls back to the original guide.
+async function getGuide(g) {
+  try { const d = await getD('content/guide_g' + g); if (d && d.json) return JSON.parse(d.json); } catch (e) { console.warn(e); }
+  if (Number(g) === 10) {
+    try { const d = await getD('content/examGuide'); if (d && d.json) return JSON.parse(d.json); } catch (e) { console.warn(e); }
+    return GUIDE_DEFAULT;
+  }
+  return null;
 }
 
 function studentStart() { Object.keys(SC).forEach(k => delete SC[k]); sNav('home'); }
@@ -977,14 +1011,14 @@ async function sHome() {
     const prog = inProgressList();
     pg.innerHTML = `<div class="hero"><div class="avatar lg">${avatarSvg(p.gender)}</div><div class="grow">
         <div style="font-size:.85rem;opacity:.85">Welcome back</div><h2 style="color:#fff;margin:0">${esc(p.name || S.sid)}</h2>
-        <div style="font-size:.85rem;opacity:.85">${esc(p.school || '')}</div></div></div>
+        <div style="font-size:.85rem;opacity:.85">Class ${myGrade()}${p.school ? ' · ' + esc(p.school) : ''}</div></div></div>
       ${prog.length ? `<div class="sectiontitle">Continue</div>${prog.map(v => `<div class="card row" style="cursor:pointer" data-resume="${esc(v.tid)}">
         <div class="grow"><b>${esc(v.title || v.tid)}</b><div class="small muted">In progress · saved on this phone</div></div><span class="btn sm">Resume</span></div>`).join('')}` : ''}
       <div class="sectiontitle">Announcements</div>
       <div id="anns">${anns.length ? anns.map(a => annHtml(a, !seen.includes(a.id))).join('') : '<div class="card empty">No announcements yet.</div>'}</div>
       <div class="sectiontitle">Your progress</div>
-      <div class="kpis"><button class="kpi" data-go="tests"><b>${doneTids.size}/${tests.length}</b><span>tests attempted</span></button>
-      <button class="kpi" data-go="guide"><b>📘</b><span>Board exam guide</span></button>
+      <div class="kpis"><button class="kpi" data-go="tests"><b>${tests.filter(t => doneTids.has(t.id)).length}/${tests.length}</b><span>tests attempted</span></button>
+      <button class="kpi" data-go="guide"><b>📘</b><span>Exam guide</span></button>
       <button class="kpi" data-go="res"><b>📄</b><span>Notes & formulas</span></button></div>`;
     $$('[data-go]', pg).forEach(b => b.onclick = () => sNav(b.dataset.go));
     $$('[data-resume]', pg).forEach(b => b.onclick = () => openTestIntro(b.dataset.resume));
@@ -1002,6 +1036,10 @@ function annHtml(a, isNew) {
 }
 
 // ---------- TESTS LIST ----------
+function solutionsOpenFor(t, atts) {
+  const first = atts.find(a => a.tid === t.id && a.n === 1);
+  return !!first && (t.solutionsOpen === true || first.solutionsOpen === true);
+}
 function testStatus(t, atts) {
   const mine = atts.filter(a => a.tid === t.id).sort((a, b) => a.n - b.n);
   const prog = lsGet(progKey(t.id, (mine.length ? mine[mine.length - 1].n : 0) + 1));
@@ -1009,10 +1047,10 @@ function testStatus(t, atts) {
   if (!mine.length) return '<span class="chip n">Not attempted</span>';
   const f = mine[0];
   const pending = (f.items || []).some(i => i.type !== 'MCQ' && !(f.grades && f.grades[i.qid] != null));
-  return `<span class="chip g">Done${mine.length > 1 ? ` ×${mine.length}` : ''}</span>${pending ? '<span class="chip p">Marking pending</span>' : ''}`;
+  return `<span class="chip g">Done${mine.length > 1 ? ` ×${mine.length}` : ''}</span>${pending ? '<span class="chip p">Marking pending</span>' : ''}${solutionsOpenFor(t, atts) ? '<span class="chip">Solutions open</span>' : ''}`;
 }
 async function sTestsView(force) {
-  const pg = sShell('tests', 'Tests', spinner());
+  const pg = sShell('tests', 'Tests', spinner(), { sub: `Class ${myGrade()}` });
   try {
     const [tests, atts] = await Promise.all([sTests(force), sAttempts(force)]);
     const groups = [['chapter', 'Chapter tests'], ['mock', 'Mock tests'], ['custom', 'More tests']];
@@ -1023,7 +1061,7 @@ async function sTestsView(force) {
         <div class="li" data-t="${esc(t.id)}"><div class="grow"><div class="t">${esc(t.title)}</div>
         <div class="small muted">${t.count} questions · ${t.totalMarks} marks${t.timer ? ` · ${t.timer} min` : ''}</div>
         <div class="chips" style="margin-top:4px">${testStatus(t, atts)}</div></div><span class="muted">›</span></div>`).join('')}</div>`;
-    }).join('') || '<div class="card empty">No tests yet. Your teacher will add them soon.</div>';
+    }).join('') || `<div class="card empty">No tests for Class ${myGrade()} yet. Your teacher will add them soon.</div>`;
     pg.insertAdjacentHTML('beforeend', '<div class="center" style="margin-top:14px"><button class="btn ghost sm" id="rf">Refresh</button></div>');
     $('#rf').onclick = () => sTestsView(true);
     $$('[data-t]', pg).forEach(el => el.onclick = () => openTestIntro(el.dataset.t));
@@ -1033,7 +1071,7 @@ async function sTestsView(force) {
 async function openTestIntro(tid) {
   const pg = sShell('tests', 'Test', spinner(), { back: () => sTestsView() });
   const [tests, atts] = await Promise.all([sTests(), sAttempts()]);
-  const t = tests.find(x => x.id === tid) || await getD('tests/' + tid);
+  const t = tests.find(x => x.id === tid) || await getD('tests/' + tid).catch(() => null);
   if (!t) { pg.innerHTML = '<div class="card empty">This test is no longer available.</div>'; return; }
   const mine = atts.filter(a => a.tid === tid).sort((a, b) => a.n - b.n);
   const nextN = (mine.length ? mine[mine.length - 1].n : 0) + 1;
@@ -1049,7 +1087,7 @@ async function openTestIntro(tid) {
       ${t.timer ? `<li>The timer keeps running even if you close the app. At zero the test submits by itself.</li>` : ''}
       <li>Your answers are saved on this phone as you go.</li>
       ${written ? `<li><b>${written} written question${written > 1 ? 's' : ''}:</b> solve on paper, type only your <b>final answer</b> (a number or one line). After submitting, send a photo of your working to your teacher on WhatsApp.</li>` : ''}
-      <li>Solutions appear after you submit.</li>${mine.length ? '<li>Your <b>first attempt</b> is your official score. Later attempts are practice.</li>' : ''}</ul></div>
+      <li>You see your MCQ score straight after submitting. Detailed solutions appear when your teacher opens them.</li>${mine.length ? '<li>Your <b>first attempt</b> is your official score. Later attempts are practice.</li>' : ''}</ul></div>
     ${mine.length ? `<div class="card"><h3>Your attempts</h3>${mine.map(a => `<div class="li" data-att="${esc(a.id)}"><div class="grow"><b>Attempt ${a.n}</b> ${a.n === 1 ? '<span class="chip g">Official</span>' : '<span class="chip n">Practice</span>'}<div class="small muted">${fmtDate(a.submittedAt)}</div></div><span class="btn sec sm">View</span></div>`).join('')}</div>` : ''}
     <div class="sp"></div>
     ${prog ? `<button class="btn block" id="go">Resume test</button>` : `<button class="btn block" id="go">${mine.length ? 'Practise again' : 'Start test'}</button>`}`;
@@ -1140,19 +1178,23 @@ function runTest(t, n) {
   async function submit(auto) {
     if (submitting) return; submitting = true; stopTimer();
     $('#app').innerHTML = `<div class="runner"><div class="runbody center">${spinner()}<p>${auto ? "Time's up! " : ''}Submitting your answers…</p></div></div>`;
+    const aid = `${S.sid}_${t.id}_${n}`;
     const att = clean({
-      sid: S.sid, uid: S.user.uid, tid: t.id, n, title: t.title, kind: t.kind || 'custom',
+      sid: S.sid, uid: S.user.uid, tid: t.id, n, title: t.title, kind: t.kind || 'custom', grade: myGrade(),
       startedAt: st.startedAt, submittedAt: now(), timeTaken: Math.round((now() - st.startedAt) / 1000), autoSubmitted: !!auto,
       items: items.map(it => ({ qid: it.qid, type: it.type, marks: it.marks, chapter: it.chapter })),
       responses: Object.fromEntries(Object.entries(st.responses).filter(([, v]) => v.o != null || (v.t && v.t.trim())).map(([k, v]) => [k, v.o != null ? { o: v.o } : { t: v.t.trim() }])),
       review: st.review
     });
     try {
-      await setDoc(D(`attempts/${S.sid}_${t.id}_${n}`), att);
+      await setDoc(D('attempts/' + aid), att);
       lsDel(key); SC.attempts = undefined;
       toast('Submitted!');
-      showResult({ id: `${S.sid}_${t.id}_${n}`, ...att }, t);
+      showResult({ id: aid, ...att }, t);
     } catch (e) {
+      // already submitted from another device or an earlier tap? then just show it
+      const existing = await getD('attempts/' + aid).catch(() => null);
+      if (existing) { lsDel(key); SC.attempts = undefined; return showResult(existing, t); }
       submitting = false; console.error(e);
       $('#app').innerHTML = `<div class="runner"><div class="runbody"><div class="card"><h3>Could not submit</h3><p class="muted">${esc(errMsg(e))}</p>
         <p class="small">Your answers are still saved on this phone. Check your internet and try again.</p><button class="btn block" id="retry">Try again</button></div></div></div>`;
@@ -1175,17 +1217,22 @@ function runTest(t, n) {
 function stopTimer() { if (runTimer) { clearInterval(runTimer); runTimer = null; } }
 
 // ---------- RESULT ----------
+// The MCQ answer key (testKeys) opens after the first attempt, so the score shows at once.
+// Correct options and detailed solutions (testSolutions) stay locked until the teacher opens them.
 async function showResult(att, test) {
   stopTimer();
   const pg = sShell('tests', test ? test.title : att.title, spinner(), { back: () => openTestIntro(att.tid), sub: `Attempt ${att.n}${att.n === 1 ? ' · official' : ' · practice'}` });
-  let keyDoc = null;
+  let keyDoc = null, solDoc = null;
   try { keyDoc = await getD('testKeys/' + att.tid); } catch (e) { console.warn(e); }
+  try { solDoc = await getD('testSolutions/' + att.tid); } catch { solDoc = null; }   // locked = permission denied
+  const open = !!solDoc;
   const key = keyDoc ? keyDoc.items : {};
+  const sols = open ? (solDoc.items || {}) : {};
   const t = test || await getD('tests/' + att.tid).catch(() => null);
   const itemById = {}; ((t && t.items) || []).forEach(i => itemById[i.qid] = i);
   const sc = scoreAttempt(att, key);
   const wa = (S.settings.whatsapp || '').replace(/\D/g, '');
-  const waText = encodeURIComponent(`Hello, this is ${S.profile.name || S.sid} (ID: ${S.sid}). My working for "${att.title}" (attempt ${att.n}) is attached.`);
+  const waText = encodeURIComponent(`Hello, this is ${S.profile.name || S.sid} (ID: ${S.sid}, Class ${myGrade()}). My working for "${att.title}" (attempt ${att.n}) is attached.`);
   pg.innerHTML = `<div class="scorehero">
       <div><div class="sv">${fmtNum(sc.mcq)}/${sc.mcqMax}</div><div class="sl">MCQ score (${sc.correct} right, ${sc.wrong} wrong, ${sc.blank} blank)</div></div>
       ${sc.writtenCount ? `<div><div class="sv">${sc.pending ? '⏳' : fmtNum(sc.wr) + '/' + sc.wrMax}</div><div class="sl">${sc.pending ? `Written: ${sc.pending} awaiting teacher's marks` : 'Written questions'}</div></div>` : ''}
@@ -1193,14 +1240,15 @@ async function showResult(att, test) {
       <div><div class="sv" style="font-size:1.2rem">${fmtDur(att.timeTaken || 0)}</div><div class="sl">Time taken${att.autoSubmitted ? ' (auto-submitted)' : ''}</div></div></div>
     ${sc.writtenCount && sc.pending ? `<div class="card" style="margin-top:12px"><h3>Send your working</h3><p class="small muted" style="margin:0 0 10px">Take clear photos of your written answers and send them to your teacher on WhatsApp. Your teacher will add the marks here.</p>
       ${wa ? `<a class="btn wa block" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${waText}">${ICON.wa} Send on WhatsApp</a>` : '<p class="small">Ask your teacher for their WhatsApp number.</p>'}</div>` : ''}
-    ${!keyDoc ? '<div class="card" style="margin-top:12px">Solutions are not available for this test.</div>' : ''}
-    <div class="chips" style="margin:16px 0 4px" id="flt"><button class="toggle on" data-f="all">All</button><button class="toggle" data-f="wrong">Wrong</button><button class="toggle" data-f="blank">Unanswered</button>${sc.writtenCount ? '<button class="toggle" data-f="written">Written</button>' : ''}</div>
+    ${open ? '' : `<div class="card" style="margin-top:12px;background:var(--syellow);border-color:#f3e3a1"><h3>🔒 Solutions are locked</h3><p class="small" style="margin:0">Your teacher will open the correct answers and detailed solutions after checking your work. Come back to this page later.</p></div>`}
+    <div class="chips" style="margin:16px 0 4px" id="flt"><button class="toggle on" data-f="all">All</button>${open ? '<button class="toggle" data-f="wrong">Wrong</button>' : ''}<button class="toggle" data-f="blank">Unanswered</button>${sc.writtenCount ? '<button class="toggle" data-f="written">Written</button>' : ''}</div>
     <div id="rqs"></div>`;
   const rows = (att.items || []).map((ai, idx) => {
-    const it = itemById[ai.qid]; const k = key[ai.qid] || {}; const resp = (att.responses || {})[ai.qid];
+    const it = itemById[ai.qid]; const k = key[ai.qid] || {}; const s = sols[ai.qid] || {}; const resp = (att.responses || {})[ai.qid];
     let cls = 'all', badge = '';
     if (ai.type === 'MCQ') {
-      if (!resp || resp.o == null) { cls += ' blank'; badge = '<span class="chip n">Not answered · 0</span>'; }
+      if (!resp || resp.o == null) { cls += ' blank'; badge = '<span class="chip n">Not answered</span>'; }
+      else if (!open) badge = '<span class="chip n">Answered</span>';
       else if (resp.o === k.answer) badge = `<span class="chip g">Correct · +${ai.marks}</span>`;
       else { cls += ' wrong'; badge = '<span class="chip r">Wrong · 0</span>'; }
     } else {
@@ -1209,12 +1257,14 @@ async function showResult(att, test) {
       badge = g == null ? `<span class="chip p">Teacher to mark · ${ai.marks}</span>` : `<span class="chip ${g >= ai.marks ? 'g' : g > 0 ? 'a' : 'r'}">${fmtNum(g)}/${ai.marks}</span>`;
     }
     const order = ai.type === 'MCQ' && it && it.options ? optionOrder(S.sid, att.tid, ai.qid, it.options.length) : null;
-    const sol = (k.solution || []).map(b => (b.x && order) ? { ...b, x: remapOptionLetters(b.x, order) } : b);
+    const sol = (s.solution || []).map(b => (b.x && order) ? { ...b, x: remapOptionLetters(b.x, order) } : b);
+    const qview = it ? (open ? questionHtml(it, { order, chosen: resp && resp.o, reveal: true, answer: k.answer })
+      : questionHtml(it, { order, chosen: resp && resp.o, locked: true })) : '<p class="muted">Question text unavailable.</p>';
     return `<div class="rq ${cls}"><div class="hd"><b>Q${idx + 1}</b><span class="chip n">${TYPE_NAME[ai.type]}</span>${badge}</div>
-      ${it ? questionHtml(it, { order, chosen: resp && resp.o, reveal: true, answer: k.answer }) : '<p class="muted">Question text unavailable.</p>'}
+      ${qview}
       ${ai.type !== 'MCQ' ? `<div class="mine"><span class="muted small">Your final answer:</span><br>${resp && resp.t ? esc(resp.t) : '<i class="muted">(blank)</i>'}</div>
-        ${k.finalAnswer ? `<div class="ansbox">${inlineRich(k.finalAnswer)}</div>` : ''}` : ''}
-      ${sol.length ? `<details class="sol"><summary>Show full solution ▾</summary><div class="solbody qtext">${renderBlocks(sol)}</div></details>` : ''}</div>`;
+        ${open && s.finalAnswer ? `<div class="ansbox">${inlineRich(s.finalAnswer)}</div>` : ''}` : ''}
+      ${open && sol.length ? `<details class="sol"><summary>Show full solution ▾</summary><div class="solbody qtext">${renderBlocks(sol)}</div></details>` : ''}</div>`;
   });
   const box = $('#rqs'); box.innerHTML = rows.join('');
   fillImages(box);
@@ -1227,21 +1277,22 @@ async function showResult(att, test) {
 
 // ---------- RESOURCES ----------
 async function sResources() {
-  const pg = sShell('res', 'Resources', spinner());
+  const pg = sShell('res', 'Resources', spinner(), { sub: `Class ${myGrade()}` });
   try {
-    const list = await sLoad('res', () => listC('resources'));
-    pg.innerHTML = resourcesHtml(list, false);
+    const list = (await sLoad('res', () => listC('resources'))).filter(r => gradeOf(r) === myGrade());
+    pg.innerHTML = resourcesHtml(list, false, myGrade());
     bindResourceAccordion(pg);
   } catch (e) { pg.innerHTML = `<div class="card">${esc(errMsg(e))}</div>`; }
 }
 function resTypeOrder(t) { const i = RES_TYPES.indexOf(t); return i < 0 ? 10 : i; }
-function resourcesHtml(list, admin) {
-  return CHAPTERS.slice(1).map((name, i) => {
-    const ch = i + 1;
+function resourcesHtml(list, admin, g) {
+  const nums = chaptersOf(g).length ? chapterNums(g, list.map(r => r.chapter)) : [...new Set(list.map(r => Number(r.chapter)))].sort((a, b) => a - b);
+  if (!nums.length) return `<div class="card empty">${admin ? `No chapters named for Class ${g} yet. Add them in <b>Classes & chapters</b>, or tap “+ Add”.` : 'Nothing added yet.'}</div>`;
+  return nums.map(ch => {
     const mine = list.filter(r => Number(r.chapter) === ch);
     const types = [...new Set([...RES_TYPES, ...mine.map(r => r.type)])].sort((a, b) => resTypeOrder(a) - resTypeOrder(b) || a.localeCompare(b));
     return `<div class="card" style="padding:0;overflow:hidden"><button class="li" data-acc style="width:100%;border:0;background:none;padding:14px 16px;text-align:left">
-      <div class="grow"><div class="t">${ch}. ${esc(name)}</div><div class="small muted">${mine.length} item${mine.length === 1 ? '' : 's'}</div></div><span class="muted">▾</span></button>
+      <div class="grow"><div class="t">${ch}. ${esc(chName(g, ch))}</div><div class="small muted">${mine.length} item${mine.length === 1 ? '' : 's'}</div></div><span class="muted">▾</span></button>
       <div class="hidden" style="padding:0 16px 14px">${types.map(tp => {
         const rs = mine.filter(r => r.type === tp).sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(b.title));
         if (!rs.length && !RES_TYPES.includes(tp)) return '';
@@ -1256,21 +1307,22 @@ function bindResourceAccordion(pg) { $$('[data-acc]', pg).forEach(b => b.onclick
 
 // ---------- EXAM GUIDE ----------
 async function sGuide(idx = 0) {
-  const pg = sShell('guide', 'Exam Guide', spinner());
-  const g = await sLoad('guide', getGuide);
+  const pg = sShell('guide', 'Exam Guide', spinner(), { sub: `Class ${myGrade()}` });
+  const g = await sLoad('guide', () => getGuide(myGrade()));
+  if (!g || !g.parts || !g.parts.length) { pg.innerHTML = `<div class="card empty">Your teacher hasn't added an exam guide for Class ${myGrade()} yet.</div>`; return; }
   const draw = k => {
     pg.innerHTML = `<div class="gtabs">${g.parts.map((p, j) => `<button class="${j === k ? 'on' : ''}" data-g="${j}">${esc(p.tab || p.title)}</button>`).join('')}</div>${renderGuidePart(g, k)}`;
     $$('[data-g]', pg).forEach(b => b.onclick = () => { draw(Number(b.dataset.g)); window.scrollTo(0, 0); });
   };
-  draw(idx);
+  draw(Math.min(idx, g.parts.length - 1));
 }
 
 // ---------- PROFILE ----------
 function sProfile() {
   const p = S.profile;
   const row = (l, v) => `<div class="li" style="cursor:default"><div class="grow"><div class="tiny muted">${l}</div><div>${esc(v || '–')}</div></div></div>`;
-  const pg = sShell('me', 'Profile', `<div class="card center"><div class="avatar lg" style="margin:0 auto 8px">${avatarSvg(p.gender)}</div><h2>${esc(p.name || '')}</h2><div class="muted">ID: ${esc(S.sid)}</div></div>
-    <div class="card" style="padding:4px 16px">${row('School', p.school)}${row('Mobile', p.mobile)}${row('Email', p.email)}${row('Address', p.address)}</div>
+  const pg = sShell('me', 'Profile', `<div class="card center"><div class="avatar lg" style="margin:0 auto 8px">${avatarSvg(p.gender)}</div><h2>${esc(p.name || '')}</h2><div class="muted">ID: ${esc(S.sid)} · Class ${myGrade()}</div></div>
+    <div class="card" style="padding:4px 16px">${row('Class', 'Class ' + myGrade())}${row('Date of birth', fmtDob(p.dob))}${row('School', p.school)}${row('Mobile', p.mobile)}${row('Email', p.email)}${row('Address', p.address)}</div>
     <p class="tiny muted center">Only you and your teacher can see these details. Ask your teacher to correct anything.</p>
     <button class="btn sec block" id="cpw">Change password</button><div class="sp"></div><button class="btn danger block" id="so">${ICON.out} Sign out</button>`);
   $('#cpw').onclick = changeOwnPassword;
@@ -1278,12 +1330,12 @@ function sProfile() {
 }
 
 // ================= ADMIN =================
-const AC = {};
+const AC = { g: 10 };
 async function aLoad(k, fn, force) { if (!force && AC[k] !== undefined) return AC[k]; AC[k] = await fn(); return AC[k]; }
 const aQ = f => aLoad('q', async () => { const m = {}; (await listC('questions')).forEach(q => m[q.id] = q); return m; }, f);
-const aTests = f => aLoad('tests', async () => (await listC('tests')).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || String(a.title).localeCompare(b.title)), f);
+const aTests = f => aLoad('tests', async () => (await listC('tests')).sort((a, b) => gradeOf(a) - gradeOf(b) || (a.order ?? 999) - (b.order ?? 999) || String(a.title).localeCompare(b.title)), f);
 const aKeys = f => aLoad('keys', async () => { const m = {}; (await listC('testKeys')).forEach(k => m[k.id] = k.items || {}); return m; }, f);
-const aStudents = f => aLoad('students', async () => (await listC('students')).sort((a, b) => String(a.name || a.id).localeCompare(b.name || b.id)), f);
+const aStudents = f => aLoad('students', async () => (await listC('students')).sort((a, b) => gradeOf(a) - gradeOf(b) || String(a.name || a.id).localeCompare(b.name || b.id)), f);
 const aAtts = f => aLoad('atts', () => listC('attempts'), f);
 const aRes = f => aLoad('res', () => listC('resources'), f);
 const aAnns = f => aLoad('anns', async () => (await listC('announcements')).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || 0) - (a.createdAt || 0)), f);
@@ -1296,11 +1348,53 @@ async function commitOps(ops, size = 15) {
   }
 }
 function qSort(a, b) { return TYPES.indexOf(a.type) - TYPES.indexOf(b.type) || a.chapter - b.chapter || (a.num || 0) - (b.num || 0) || String(a.id).localeCompare(b.id); }
+function gradeChips(cur, all = false) {
+  return `<div class="chips" style="margin-bottom:10px">${all ? `<button class="toggle ${cur === 'all' ? 'on' : ''}" data-gr="all">All classes</button>` : ''}${GRADES.map(g => `<button class="toggle ${Number(cur) === g ? 'on' : ''}" data-gr="${g}">Class ${g}</button>`).join('')}</div>`;
+}
+function bindGradeChips(root, fn) { $$('[data-gr]', root).forEach(b => b.onclick = () => fn(b.dataset.gr === 'all' ? 'all' : Number(b.dataset.gr))); }
+const studentGrade = s => gradeOf(s);
 
-function adminStart() { Object.keys(AC).forEach(k => delete AC[k]); aNav('dash'); }
+async function adminStart() {
+  Object.keys(AC).forEach(k => delete AC[k]); AC.g = 10;
+  if ((S.settings.schema || 0) < 2) {
+    try { await migrateV2(); }
+    catch (e) {
+      console.error(e);
+      $('#app').innerHTML = `<div class="page"><div class="card"><h3>The one-time update could not finish</h3><p class="muted">${esc(errMsg(e))}</p>
+        <p class="small">Make sure the <b>new Firestore rules</b> are pasted and published, then reload this page. Nothing has been lost.</p><button class="btn" onclick="location.reload()">Reload</button></div></div>`;
+      return;
+    }
+  }
+  aNav('dash');
+}
+// One-time update: classes on every record, and answers split from solutions so solutions can stay locked.
+async function migrateV2() {
+  const close = modal(`<h3>Updating your app…</h3><p class="muted" id="mpr">One-time update for Classes 6–12 and locked solutions.</p>${spinner()}<p class="tiny muted">Keep this page open. It takes about a minute.</p>`);
+  const say = t => { const el = $('#mpr'); if (el) el.textContent = t; };
+  try {
+    const ops = [];
+    if (!(await getD('config/grades'))) ops.push(['set', 'config/grades', { chapters: { 10: CH10 }, updatedAt: now() }]);
+    (await listC('questions')).filter(q => q.grade == null).forEach(q => ops.push(['update', 'questions/' + q.id, { grade: 10 }]));
+    (await listC('students')).forEach(s => {
+      const g = gradeOf(s);
+      if (s.grade == null) ops.push(['update', 'students/' + s.id, { grade: g }]);
+      if (s.uid) ops.push(['set', 'users/' + s.uid, { role: 'student', sid: s.id, grade: g }]);
+    });
+    (await listC('resources')).filter(r => r.grade == null).forEach(r => ops.push(['update', 'resources/' + r.id, { grade: 10 }]));
+    say('Adding classes to questions, students and resources…');
+    await commitOps(ops);
+    AC.q = undefined; await aQ(true);
+    say('Locking solutions in every test…');
+    const tests = await listC('tests');
+    await saveTests(tests.map(t => ({ ...t, grade: t.grade ?? 10, solutionsOpen: t.solutionsOpen === true })));
+    await setDoc(D('config/settings'), { ...S.settings, schema: 2, updatedAt: now() });
+    S.settings.schema = 2; await loadGrades();
+    close(); toast('Update complete ✓');
+  } catch (e) { close(); throw e; }
+}
 
 const ANAV = [['dash', 'Dashboard', ICON.home], ['students', 'Students', ICON.users], ['results', 'Results & export', ICON.chart], ['marking', 'Marking', ICON.pen],
-  ['tests', 'Tests', ICON.tests], ['questions', 'Question bank', ICON.q], ['resources', 'Resources', ICON.book], ['anns', 'Announcements', ICON.bell],
+  ['tests', 'Tests', ICON.tests], ['questions', 'Question bank', ICON.q], ['classes', 'Classes & chapters', ICON.book], ['resources', 'Resources', ICON.link], ['anns', 'Announcements', ICON.bell],
   ['guide', 'Exam Guide', ICON.guide], ['settings', 'Settings', ICON.gear]];
 function aShell(sec, title, body, opts = {}) {
   S.view = 'admin-' + sec;
@@ -1319,7 +1413,8 @@ function aShell(sec, title, body, opts = {}) {
   return $('#pg');
 }
 function aNav(sec, arg) {
-  const f = { dash: aDash, students: aStudentsView, results: aResults, marking: aMarking, tests: aTestsView, questions: aQuestionsView, resources: aResources, anns: aAnnsView, guide: aGuideEditor, settings: aSettings }[sec];
+  const f = { dash: aDash, students: aStudentsView, results: aResults, marking: aMarking, tests: aTestsView, questions: aQuestionsView, classes: aClasses,
+    resources: aResources, anns: aAnnsView, guide: aGuideEditor, settings: aSettings }[sec];
   return f(arg);
 }
 async function guard(pg, fn) { try { await fn(); } catch (e) { console.error(e); pg.innerHTML = `<div class="card"><h3>Something went wrong</h3><p class="muted">${esc(errMsg(e))}</p><button class="btn" onclick="location.reload()">Reload</button></div>`; } }
@@ -1335,19 +1430,21 @@ async function aDash() {
     const [q, tests, studs, atts] = await Promise.all([aQ(), aTests(), aStudents(), aAtts()]);
     const nq = Object.keys(q).length;
     const pend = officialAttempts(atts).filter(a => pendingCount(a) > 0).length;
+    const byClass = GRADES.map(g => [g, studs.filter(s => studentGrade(s) === g).length]).filter(([, n]) => n);
     const steps = [
       [nq > 0, 'Import the question bank', 'Choose the file question-bank.json (140 questions, 16 tests).', 'questions'],
-      [studs.length > 0, 'Add your students', 'Give each student an ID and password.', 'students'],
+      [studs.length > 0, 'Add your students', 'Give each student an ID, password and class.', 'students'],
       [!!(S.settings.whatsapp), 'Add your WhatsApp number', 'Students get a button to send you photos of their working.', 'settings']];
     pg.innerHTML = `${steps.some(s => !s[0]) ? `<div class="card"><h3>Getting started</h3>${steps.map(([done, t, d, go]) => `
         <div class="li" data-go="${go}"><span class="chip ${done ? 'g' : 'n'}">${done ? '✓' : '•'}</span><div class="grow"><div class="t">${t}</div><div class="small muted">${d}</div></div><span class="muted">›</span></div>`).join('')}</div>` : ''}
       <div class="sectiontitle">Overview</div>
       <div class="kpis">
-        <button class="kpi" data-go="students"><b>${studs.length}</b><span>Students</span></button>
+        <button class="kpi" data-go="students"><b>${studs.length}</b><span>Students${byClass.length ? ' · ' + byClass.map(([g, n]) => `C${g}: ${n}`).join(', ') : ''}</span></button>
         <button class="kpi" data-go="marking"><b>${pend}</b><span>Attempts to mark</span></button>
         <button class="kpi" data-go="results"><b>${atts.length}</b><span>Attempts submitted</span></button>
         <button class="kpi" data-go="tests"><b>${tests.length}</b><span>Tests</span></button>
         <button class="kpi" data-go="questions"><b>${nq}</b><span>Questions</span></button>
+        <button class="kpi" data-go="classes"><b>📚</b><span>Classes & chapters</span></button>
         <button class="kpi" data-go="anns"><b>📣</b><span>Announcements</span></button>
         <button class="kpi" data-go="resources"><b>📄</b><span>Resources</span></button>
         <button class="kpi" data-go="guide"><b>📘</b><span>Exam Guide</span></button>
@@ -1356,7 +1453,7 @@ async function aDash() {
       <div class="card" style="padding:4px 14px">${atts.length ? atts.slice().sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)).slice(0, 8).map(a => {
         const s = studs.find(x => x.id === a.sid);
         return `<div class="li" data-att="${esc(a.id)}"><div class="avatar">${avatarSvg(s && s.gender)}</div><div class="grow"><div class="t">${esc(s ? s.name : a.sid)}</div>
-          <div class="small muted">${esc(a.title)} · attempt ${a.n} · ${fmtDate(a.submittedAt)}</div></div>${pendingCount(a) && a.n === 1 ? '<span class="chip p">To mark</span>' : ''}</div>`;
+          <div class="small muted">Class ${gradeOf(s || a)} · ${esc(a.title)} · attempt ${a.n} · ${fmtDate(a.submittedAt)}</div></div>${pendingCount(a) && a.n === 1 ? '<span class="chip p">To mark</span>' : ''}</div>`;
       }).join('') : '<div class="empty">No submissions yet.</div>'}</div>`;
     $$('[data-go]', pg).forEach(b => b.onclick = () => aNav(b.dataset.go));
     $$('[data-att]', pg).forEach(b => b.onclick = () => aAttempt(b.dataset.att, () => aDash()));
@@ -1369,26 +1466,34 @@ async function aStudentsView() {
   $('#add').onclick = () => aStudentForm(null);
   guard(pg, async () => {
     const studs = await aStudents();
-    const draw = f => {
-      const list = studs.filter(s => !f || [s.id, s.name, s.school, s.mobile].join(' ').toLowerCase().includes(f));
+    let g = AC.sg || 'all', f = '';
+    const draw = () => {
+      const list = studs.filter(s => (g === 'all' || studentGrade(s) === g) && (!f || [s.id, s.name, s.school, s.mobile].join(' ').toLowerCase().includes(f)));
       $('#sl').innerHTML = list.length ? list.map(s => `<div class="li" data-s="${esc(s.id)}"><div class="avatar">${avatarSvg(s.gender)}</div>
-        <div class="grow"><div class="t">${esc(s.name || s.id)}</div><div class="small muted">ID: ${esc(s.id)}${s.school ? ' · ' + esc(s.school) : ''}</div></div><span class="muted">›</span></div>`).join('')
-        : `<div class="empty">${studs.length ? 'No match.' : 'No students yet. Tap “+ Add”.'}</div>`;
+        <div class="grow"><div class="t">${esc(s.name || s.id)}</div><div class="small muted">Class ${studentGrade(s)} · ID: ${esc(s.id)}${s.school ? ' · ' + esc(s.school) : ''}</div></div><span class="muted">›</span></div>`).join('')
+        : `<div class="empty">${studs.length ? 'No students match.' : 'No students yet. Tap “+ Add”.'}</div>`;
       $$('[data-s]', pg).forEach(el => el.onclick = () => aStudentDetail(el.dataset.s));
     };
-    pg.innerHTML = `<input class="input" id="sf" placeholder="Search by name, ID, school…"><div class="sp"></div><div class="card" style="padding:4px 14px" id="sl"></div>`;
-    $('#sf').oninput = e => draw(e.target.value.trim().toLowerCase());
-    draw('');
+    const shell = () => {
+      pg.innerHTML = `${gradeChips(g, true)}<div class="row"><input class="input grow" id="sf" placeholder="Search by name, ID, school…" value="${esc(f)}"><button class="btn sec sm" id="sx">⬇ List (CSV)</button></div><div class="sp"></div><div class="card" style="padding:4px 14px" id="sl"></div>`;
+      bindGradeChips(pg, v => { g = AC.sg = v; shell(); });
+      $('#sf').oninput = e => { f = e.target.value.trim().toLowerCase(); draw(); };
+      $('#sx').onclick = () => exportStudents(studs);
+      draw();
+    };
+    shell();
   });
 }
 function aStudentForm(s) {
-  const isNew = !s; s = s || { gender: 'm' };
+  const isNew = !s; s = s || { gender: 'm', grade: AC.sg && AC.sg !== 'all' ? AC.sg : 10 };
   const pg = aShell('students', isNew ? 'Add student' : 'Edit student', `
     <div class="card">
       ${isNew ? `<div class="grid2"><label class="field"><span>Student ID (used to sign in)</span><input class="input" id="fid" autocapitalize="none" placeholder="e.g. riya10"></label>
       <label class="field"><span>Password (min 6)</span><input class="input" id="fpw" placeholder="give this to the student"></label></div>`
       : `<p class="muted small">ID: <b>${esc(s.id)}</b> (cannot be changed)</p>`}
       <label class="field"><span>Full name</span><input class="input" id="fname" value="${esc(s.name || '')}"></label>
+      <div class="grid2"><label class="field"><span>Class</span><select class="input" id="fgr">${gradeOptions(gradeOf(s))}</select></label>
+      <label class="field"><span>Date of birth</span><input class="input" id="fdob" type="date" value="${esc(s.dob || '')}"></label></div>
       <div class="field"><span>Avatar</span><div class="row">
         <label class="row" style="cursor:pointer"><input type="radio" name="g" value="m" ${s.gender !== 'f' ? 'checked' : ''}><div class="avatar">${avatarSvg('m')}</div> Male</label>
         <label class="row" style="cursor:pointer;margin-left:14px"><input type="radio" name="g" value="f" ${s.gender === 'f' ? 'checked' : ''}><div class="avatar">${avatarSvg('f')}</div> Female</label></div></div>
@@ -1400,9 +1505,14 @@ function aStudentForm(s) {
     { back: () => isNew ? aStudentsView() : aStudentDetail(s.id) });
   $('#fsave').onclick = () => busy($('#fsave'), async () => {
     const err = m => $('#ferr').innerHTML = `<div class="err">${esc(m)}</div>`;
-    const data = { name: $('#fname').value.trim(), gender: $('input[name=g]:checked').value, mobile: $('#fmob').value.trim(), email: $('#fem').value.trim(), school: $('#fsch').value.trim(), address: $('#fadd').value.trim(), updatedAt: now() };
+    const data = { name: $('#fname').value.trim(), grade: Number($('#fgr').value), dob: $('#fdob').value || '', gender: $('input[name=g]:checked').value,
+      mobile: $('#fmob').value.trim(), email: $('#fem').value.trim(), school: $('#fsch').value.trim(), address: $('#fadd').value.trim(), updatedAt: now() };
     if (!data.name) return err('Enter the student’s name.');
-    if (!isNew) { await updateDoc(D('students/' + s.id), data); AC.students = undefined; toast('Saved'); return aStudentDetail(s.id); }
+    if (!isNew) {
+      const ops = [['update', 'students/' + s.id, data]];
+      if (s.uid) ops.push(['set', 'users/' + s.uid, { role: 'student', sid: s.id, grade: data.grade }]);   // keeps the class the security rules see in step
+      await commitOps(ops); AC.students = undefined; toast('Saved'); return aStudentDetail(s.id);
+    }
     const sid = normId($('#fid').value), pw = $('#fpw').value;
     if (!/^[a-z0-9][a-z0-9._-]{1,29}$/.test(sid)) return err('ID: 2–30 letters or numbers (dots, dashes and _ allowed), no spaces.');
     if (pw.length < 6) return err('Password must be at least 6 characters.');
@@ -1411,9 +1521,9 @@ function aStudentForm(s) {
     let email = `${sid}@${LOGIN_DOMAIN}`, uid;
     try { uid = await createLogin(email, pw); }
     catch (e) { if (e.code !== 'auth/email-already-in-use') throw e; email = `${sid}.${now().toString(36)}@${LOGIN_DOMAIN}`; uid = await createLogin(email, pw); }
-    await commitOps([['set', 'students/' + sid, clean({ ...data, uid, createdAt: now() })], ['set', 'users/' + uid, { role: 'student', sid }], ['set', 'logins/' + sid, { email }]]);
+    await commitOps([['set', 'students/' + sid, clean({ ...data, uid, createdAt: now() })], ['set', 'users/' + uid, { role: 'student', sid, grade: data.grade }], ['set', 'logins/' + sid, { email }]]);
     AC.students = undefined;
-    modal(`<h3>Student created ✓</h3><p>Share these with <b>${esc(data.name)}</b>:</p><div class="card flat" style="background:var(--sblue)">ID: <b>${esc(sid)}</b><br>Password: <b>${esc(pw)}</b><br>Link: <b>${esc(location.href.split('#')[0])}</b></div>
+    modal(`<h3>Student created ✓</h3><p>Share these with <b>${esc(data.name)}</b> (Class ${data.grade}):</p><div class="card flat" style="background:var(--sblue)">ID: <b>${esc(sid)}</b><br>Password: <b>${esc(pw)}</b><br>Link: <b>${esc(location.href.split('#')[0])}</b></div>
       <p class="tiny muted">The password is not stored anywhere you can see later. If it is lost, use “Reset password”.</p><button class="btn block" data-c>Done</button>`, (m, close) => m.querySelector('[data-c]').onclick = close);
     aStudentDetail(sid);
   });
@@ -1424,16 +1534,16 @@ async function aStudentDetail(sid) {
     const [studs, atts, keys] = await Promise.all([aStudents(), aAtts(), aKeys()]);
     const s = studs.find(x => x.id === sid) || await getD('students/' + sid);
     if (!s) { pg.innerHTML = '<div class="card empty">Student not found.</div>'; return; }
+    const g = studentGrade(s);
     const mine = atts.filter(a => a.sid === sid).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
-    const perCh = {};
-    officialAttempts(mine).forEach(a => { const r = scoreAttempt(a, keys[a.tid]); for (const [c, v] of Object.entries(r.perCh)) { perCh[c] = perCh[c] || { got: 0, max: 0 }; perCh[c].got += v.got; perCh[c].max += v.max; } });
+    const perCh = chapterWise(officialAttempts(mine).filter(a => gradeOf(a) === g || a.grade == null), keys);
     const row = (l, v) => `<div><div class="tiny muted">${l}</div><div>${esc(v || '–')}</div></div>`;
-    pg.innerHTML = `<div class="card"><div class="row"><div class="avatar lg">${avatarSvg(s.gender)}</div><div class="grow"><h2 style="margin:0">${esc(s.name)}</h2><div class="muted">ID: ${esc(s.id)}</div></div></div>
-      <div class="grid2" style="margin-top:12px">${row('School', s.school)}${row('Mobile', s.mobile)}${row('Email', s.email)}${row('Address', s.address)}</div>
+    pg.innerHTML = `<div class="card"><div class="row"><div class="avatar lg">${avatarSvg(s.gender)}</div><div class="grow"><h2 style="margin:0">${esc(s.name)}</h2><div class="muted">Class ${g} · ID: ${esc(s.id)}</div></div></div>
+      <div class="grid2" style="margin-top:12px">${row('Date of birth', fmtDob(s.dob))}${row('School', s.school)}${row('Mobile', s.mobile)}${row('Email', s.email)}${row('Address', s.address)}</div>
       <div class="row wrap" style="margin-top:14px"><button class="btn sec sm" id="ed">Edit</button><button class="btn sec sm" id="rp">Reset password</button><button class="btn danger sm" id="del">Delete</button></div></div>
-      <div class="sectiontitle">Chapter-wise performance (official attempts)</div>
-      <div class="card">${Object.keys(perCh).length ? CHAPTERS.slice(1).map((n, i) => { const v = perCh[i + 1]; if (!v || !v.max) return ''; const p = pct(v.got, v.max);
-        return `<div style="margin:8px 0"><div class="row small"><span class="grow">${i + 1}. ${esc(n)}</span><b>${p}%</b><span class="muted">${fmtNum(v.got)}/${v.max}</span></div><div class="bar"><div style="width:${p}%;background:${p >= 75 ? 'var(--green)' : p >= 50 ? 'var(--amber)' : 'var(--red)'}"></div></div></div>`; }).join('')
+      <div class="sectiontitle">Chapter-wise performance (official attempts, Class ${g})</div>
+      <div class="card">${Object.keys(perCh).length ? Object.keys(perCh).map(Number).sort((x, y) => x - y).map(c => { const v = perCh[c]; if (!v || !v.max) return ''; const p = pct(v.got, v.max);
+        return `<div style="margin:8px 0"><div class="row small"><span class="grow">${c}. ${esc(chName(g, c))}</span><b>${p}%</b><span class="muted">${fmtNum(v.got)}/${v.max}</span></div><div class="bar"><div style="width:${p}%;background:${p >= 75 ? 'var(--green)' : p >= 50 ? 'var(--amber)' : 'var(--red)'}"></div></div></div>`; }).join('')
         : '<div class="empty">No marked attempts yet.</div>'}</div>
       <div class="sectiontitle">Attempts</div>
       <div class="card" style="padding:4px 14px">${mine.length ? mine.map(a => { const r = scoreAttempt(a, keys[a.tid]);
@@ -1459,7 +1569,7 @@ function resetStudentPassword(s) {
       const uid = await createLogin(email, pw);
       const ops = [];
       if (s.uid) ops.push(['delete', 'users/' + s.uid]);
-      ops.push(['set', 'users/' + uid, { role: 'student', sid: s.id }], ['update', 'students/' + s.id, { uid, updatedAt: now() }], ['set', 'logins/' + s.id, { email }]);
+      ops.push(['set', 'users/' + uid, { role: 'student', sid: s.id, grade: studentGrade(s) }], ['update', 'students/' + s.id, { uid, updatedAt: now() }], ['set', 'logins/' + s.id, { email }]);
       await commitOps(ops);
       AC.students = undefined; close();
       modal(`<h3>Password reset ✓</h3><div class="card flat" style="background:var(--sblue)">ID: <b>${esc(s.id)}</b><br>New password: <b>${esc(pw)}</b></div><button class="btn block" data-c>Done</button>`, (m2, c2) => m2.querySelector('[data-c]').onclick = c2);
@@ -1484,27 +1594,33 @@ async function aAttempt(aid, back) {
     const [atts, keys, tests, studs] = await Promise.all([aAtts(), aKeys(), aTests(), aStudents()]);
     const a = atts.find(x => x.id === aid) || await getD('attempts/' + aid);
     const key = keys[a.tid] || {}; const t = tests.find(x => x.id === a.tid); const s = studs.find(x => x.id === a.sid);
+    const sols = ((await getD('testSolutions/' + a.tid).catch(() => null)) || {}).items || {};
+    const firstId = `${a.sid}_${a.tid}_1`;
+    const first = atts.find(x => x.id === firstId) || (a.n === 1 ? a : await getD('attempts/' + firstId).catch(() => null));
     const itemById = {}; ((t && t.items) || []).forEach(i => itemById[i.qid] = i);
     const grades = { ...(a.grades || {}) };
     const draw = () => {
       const r = scoreAttempt({ ...a, grades }, key);
-      pg.innerHTML = `<div class="card"><div class="row"><div class="avatar">${avatarSvg(s && s.gender)}</div><div class="grow"><b>${esc(s ? s.name : a.sid)}</b> <span class="muted small">(${esc(a.sid)})</span>
+      const testOpen = !!(t && t.solutionsOpen === true), stuOpen = !!(first && first.solutionsOpen === true);
+      pg.innerHTML = `<div class="card"><div class="row"><div class="avatar">${avatarSvg(s && s.gender)}</div><div class="grow"><b>${esc(s ? s.name : a.sid)}</b> <span class="muted small">(${esc(a.sid)} · Class ${gradeOf(s || a)})</span>
         <div class="small muted">${esc(a.title)} · attempt ${a.n}${a.n === 1 ? ' (official)' : ' (practice)'} · ${fmtDate(a.submittedAt)} · ${fmtDur(a.timeTaken || 0)}${a.autoSubmitted ? ' · auto-submitted' : ''}</div></div></div>
         <div class="chips" style="margin-top:10px"><span class="chip">MCQ ${fmtNum(r.mcq)}/${r.mcqMax}</span>${r.writtenCount ? `<span class="chip ${r.pending ? 'p' : 'g'}">Written ${fmtNum(r.wr)}/${r.wrMax}${r.pending ? ` · ${r.pending} to mark` : ''}</span>` : ''}<span class="chip g">Total ${fmtNum(r.total)}/${r.max}${r.pending ? ' so far' : ''}</span></div></div>
+        ${first ? `<div class="card row"><div class="grow"><b>${testOpen || stuOpen ? '🔓' : '🔒'} Solutions for this student</b><div class="small muted">${testOpen ? 'Open for everyone who took this test. Change it in Tests.' : stuOpen ? 'Open: this student can now see correct answers and solutions.' : 'Locked: this student sees only their MCQ score.'}</div></div>
+          ${testOpen ? '' : `<button class="btn ${stuOpen ? 'sec' : ''} sm" id="rel">${stuOpen ? 'Lock again' : 'Open for this student'}</button>`}</div>` : ''}
         ${r.writtenCount ? `<div class="info small">Enter marks for each written question (from the photos the student sends you on WhatsApp), then tap <b>Save marks</b>.</div>` : ''}
         <div id="qs">${(a.items || []).map((ai, idx) => {
-          const it = itemById[ai.qid]; const k = key[ai.qid] || {}; const resp = (a.responses || {})[ai.qid];
+          const it = itemById[ai.qid]; const k = key[ai.qid] || {}; const so = sols[ai.qid] || {}; const resp = (a.responses || {})[ai.qid];
           if (ai.type === 'MCQ') {
             const ok = resp && resp.o === k.answer;
             return `<div class="rq"><div class="hd"><b>Q${idx + 1}</b><span class="chip n">MCQ · ${ai.marks}</span>${!resp ? '<span class="chip n">Not answered</span>' : ok ? '<span class="chip g">Correct</span>' : '<span class="chip r">Wrong</span>'}</div>
-              <details class="sol"><summary>Show question ▾</summary>${it ? questionHtml(it, { chosen: resp && resp.o, reveal: true, answer: k.answer }) : ''}</details></div>`;
+              <details class="sol"><summary>Show question ▾</summary>${it ? questionHtml(it, { chosen: resp && resp.o, reveal: true, answer: k.answer }) : ''}${so.solution && so.solution.length ? `<div class="solbody qtext">${renderBlocks(so.solution)}</div>` : ''}</details></div>`;
           }
           const g = grades[ai.qid];
           return `<div class="rq"><div class="hd"><b>Q${idx + 1}</b><span class="chip n">${TYPE_NAME[ai.type]} · ${ai.marks} marks</span>${g == null ? '<span class="chip p">To mark</span>' : `<span class="chip g">${fmtNum(g)}/${ai.marks}</span>`}</div>
             <details class="sol"><summary>Show question ▾</summary>${it ? questionHtml(it) : ''}</details>
             <div class="mine"><span class="muted small">Student's final answer:</span><br>${resp && resp.t ? esc(resp.t) : '<i class="muted">(blank)</i>'}</div>
-            ${k.finalAnswer ? `<div class="ansbox">${inlineRich(k.finalAnswer)}</div>` : ''}
-            <details class="sol"><summary>Model solution ▾</summary><div class="solbody qtext">${renderBlocks(k.solution)}</div></details>
+            ${so.finalAnswer ? `<div class="ansbox">${inlineRich(so.finalAnswer)}</div>` : ''}
+            <details class="sol"><summary>Model solution ▾</summary><div class="solbody qtext">${renderBlocks(so.solution)}</div></details>
             <div class="gradebox"><span class="small">Marks:</span><input class="input" type="number" min="0" max="${ai.marks}" step="0.5" data-g="${esc(ai.qid)}" value="${g == null ? '' : g}" placeholder="0–${ai.marks}">
               <span class="muted">/ ${ai.marks}</span><button class="btn sec sm" data-full="${esc(ai.qid)}" data-m="${ai.marks}">Full</button><button class="btn sec sm" data-zero="${esc(ai.qid)}">0</button></div></div>`;
         }).join('')}</div>
@@ -1514,6 +1630,11 @@ async function aAttempt(aid, back) {
       $$('[data-g]', pg).forEach(inp => inp.oninput = () => { const v = inp.value === '' ? null : Math.max(0, Math.min(Number(inp.max), Number(inp.value))); if (v == null) delete grades[inp.dataset.g]; else grades[inp.dataset.g] = v; });
       $$('[data-full]', pg).forEach(b => b.onclick = () => { grades[b.dataset.full] = Number(b.dataset.m); draw(); });
       $$('[data-zero]', pg).forEach(b => b.onclick = () => { grades[b.dataset.zero] = 0; draw(); });
+      if ($('#rel')) $('#rel').onclick = () => busy($('#rel'), async () => {
+        const v = !(first.solutionsOpen === true);
+        await updateDoc(D('attempts/' + first.id), { solutionsOpen: v }); first.solutionsOpen = v;
+        toast(v ? 'Solutions opened for this student' : 'Solutions locked again'); draw();
+      });
       if ($('#save')) $('#save').onclick = () => busy($('#save'), async () => {
         const done = (a.items || []).filter(i => i.type !== 'MCQ').every(i => grades[i.qid] != null);
         await updateDoc(D('attempts/' + a.id), { grades, gradedAt: now(), graded: done });
@@ -1531,7 +1652,7 @@ async function aMarking() {
     pg.innerHTML = `<p class="muted small">First (official) attempts that still have written questions to mark. Practice attempts don't need marking.</p>
       <div class="card" style="padding:4px 14px">${list.length ? list.map(a => { const s = studs.find(x => x.id === a.sid);
         return `<div class="li" data-att="${esc(a.id)}"><div class="avatar">${avatarSvg(s && s.gender)}</div><div class="grow"><div class="t">${esc(s ? s.name : a.sid)}</div>
-        <div class="small muted">${esc(a.title)} · ${fmtDate(a.submittedAt)}</div></div><span class="chip p">${pendingCount(a)} to mark</span></div>`; }).join('') : '<div class="empty">Nothing to mark. 🎉</div>'}</div>
+        <div class="small muted">Class ${gradeOf(s || a)} · ${esc(a.title)} · ${fmtDate(a.submittedAt)}</div></div><span class="chip p">${pendingCount(a)} to mark</span></div>`; }).join('') : '<div class="empty">Nothing to mark. 🎉</div>'}</div>
       <div class="center" style="margin-top:12px"><button class="btn ghost sm" id="rf">Refresh</button></div>`;
     $('#rf').onclick = () => { AC.atts = undefined; aMarking(); };
     $$('[data-att]', pg).forEach(el => el.onclick = () => aAttempt(el.dataset.att, () => aMarking()));
@@ -1544,30 +1665,34 @@ async function aResults() {
   guard(pg, async () => {
     const [atts, keys, tests, studs] = await Promise.all([aAtts(true), aKeys(), aTests(), aStudents()]);
     const off = officialAttempts(atts);
-    let mode = 'tests';
+    let mode = 'tests', g = AC.g || 10;
     const draw = () => {
+      const cs = studs.filter(s => studentGrade(s) === g);
+      const offG = off.filter(a => cs.some(s => s.id === a.sid));
       let table;
       if (mode === 'tests') {
-        const used = tests.filter(t => off.some(a => a.tid === t.id));
+        const used = tests.filter(t => gradeOf(t) === g && offG.some(a => a.tid === t.id));
         table = `<table class="tbl"><tr><th>Student</th>${used.map(t => `<th class="num">${esc(t.kind === 'chapter' ? 'Ch ' + t.chapter : t.title)}</th>`).join('')}</tr>
-          ${studs.map(s => `<tr><td><b>${esc(s.name)}</b><div class="tiny muted">${esc(s.id)}</div></td>${used.map(t => {
-            const a = off.find(x => x.sid === s.id && x.tid === t.id); if (!a) return '<td class="num muted">–</td>';
+          ${cs.map(s => `<tr><td><b>${esc(s.name)}</b><div class="tiny muted">${esc(s.id)}</div></td>${used.map(t => {
+            const a = offG.find(x => x.sid === s.id && x.tid === t.id); if (!a) return '<td class="num muted">–</td>';
             const r = scoreAttempt(a, keys[t.id]);
             return `<td class="num" style="cursor:pointer" data-att="${esc(a.id)}"><b>${fmtNum(r.total)}</b>/${r.max}${r.pending ? '<span style="color:var(--purple)">*</span>' : ''}</td>`; }).join('')}</tr>`).join('')}</table>`;
       } else {
-        table = `<table class="tbl"><tr><th>Student</th>${CHAPTERS.slice(1).map((_, i) => `<th class="num">Ch ${i + 1}</th>`).join('')}<th class="num">Overall</th></tr>
-          ${studs.map(s => { const pc = chapterWise(off.filter(a => a.sid === s.id), keys); let G = 0, M = 0;
-            return `<tr><td><b>${esc(s.name)}</b><div class="tiny muted">${esc(s.id)}</div></td>${CHAPTERS.slice(1).map((_, i) => { const v = pc[i + 1]; if (!v || !v.max) return '<td class="num muted">–</td>'; G += v.got; M += v.max; const p = pct(v.got, v.max);
+        const chs = chapterNums(g, offG.flatMap(a => (a.items || []).map(i => i.chapter))).filter(c => offG.some(a => (a.items || []).some(i => Number(i.chapter) === c)) || c <= chaptersOf(g).length);
+        table = `<table class="tbl"><tr><th>Student</th>${chs.map(c => `<th class="num" title="${esc(chName(g, c))}">Ch ${c}</th>`).join('')}<th class="num">Overall</th></tr>
+          ${cs.map(s => { const pc = chapterWise(offG.filter(a => a.sid === s.id), keys); let G = 0, M = 0;
+            return `<tr><td><b>${esc(s.name)}</b><div class="tiny muted">${esc(s.id)}</div></td>${chs.map(c => { const v = pc[c]; if (!v || !v.max) return '<td class="num muted">–</td>'; G += v.got; M += v.max; const p = pct(v.got, v.max);
               return `<td class="num" style="background:${p >= 75 ? '#e3f6ec' : p >= 50 ? '#fdf3d8' : '#fde6e6'}">${p}%</td>`; }).join('')}<td class="num"><b>${M ? pct(G, M) + '%' : '–'}</b></td></tr>`; }).join('')}</table>`;
       }
-      pg.innerHTML = `<div class="row wrap"><button class="toggle ${mode === 'tests' ? 'on' : ''}" data-m="tests">Scores by test</button><button class="toggle ${mode === 'ch' ? 'on' : ''}" data-m="ch">Chapter-wise %</button>
-        <span class="grow"></span><button class="btn sm" id="x1">⬇ Export results (CSV)</button><button class="btn sec sm" id="x2">⬇ Chapter-wise (CSV)</button></div>
-        <p class="tiny muted">Official (first) attempts only. * = written questions not yet marked. Tap a score to open the attempt. CSV files open in Excel and Google Sheets.</p>
-        <div class="tblwrap">${studs.length ? table : '<div class="empty">No students yet.</div>'}</div>`;
+      pg.innerHTML = `${gradeChips(g)}<div class="row wrap"><button class="toggle ${mode === 'tests' ? 'on' : ''}" data-m="tests">Scores by test</button><button class="toggle ${mode === 'ch' ? 'on' : ''}" data-m="ch">Chapter-wise %</button>
+        <span class="grow"></span><button class="btn sm" id="x1">⬇ All results (CSV)</button><button class="btn sec sm" id="x2">⬇ Class ${g} chapter-wise (CSV)</button></div>
+        <p class="tiny muted">Class ${g}, official (first) attempts only. * = written questions not yet marked. Tap a score to open the attempt. CSV files open in Excel and Google Sheets.</p>
+        <div class="tblwrap">${cs.length ? table : `<div class="empty">No students in Class ${g} yet.</div>`}</div>`;
+      bindGradeChips(pg, v => { g = AC.g = v; draw(); });
       $$('[data-m]', pg).forEach(b => b.onclick = () => { mode = b.dataset.m; draw(); });
       $$('[data-att]', pg).forEach(c => c.onclick = () => aAttempt(c.dataset.att, () => aResults()));
       $('#x1').onclick = () => exportResults(atts, keys, studs);
-      $('#x2').onclick = () => exportChapterwise(off, keys, studs);
+      $('#x2').onclick = () => exportChapterwise(off, keys, studs, g);
     };
     draw();
   });
@@ -1579,38 +1704,48 @@ function chapterWise(atts, keys) {
 }
 function stamp() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 function exportResults(atts, keys, studs) {
-  const rows = [['Student ID', 'Name', 'School', 'Test', 'Attempt', 'Official', 'Submitted', 'Time (min)', 'MCQ score', 'MCQ max', 'Written score', 'Written max', 'Written status', 'Total', 'Max', 'Percent']];
+  const rows = [['Student ID', 'Name', 'Class', 'School', 'Test', 'Attempt', 'Official', 'Submitted', 'Time (min)', 'MCQ score', 'MCQ max', 'Written score', 'Written max', 'Written status', 'Total', 'Max', 'Percent']];
   atts.slice().sort((a, b) => String(a.sid).localeCompare(b.sid) || (a.submittedAt || 0) - (b.submittedAt || 0)).forEach(a => {
     const s = studs.find(x => x.id === a.sid) || {}; const r = scoreAttempt(a, keys[a.tid]);
-    rows.push([a.sid, s.name || '(deleted)', s.school || '', a.title, a.n, a.n === 1 ? 'Yes' : 'No', fmtDate(a.submittedAt), Math.round((a.timeTaken || 0) / 60),
+    rows.push([a.sid, s.name || '(deleted)', a.grade ?? (s.id ? studentGrade(s) : ''), s.school || '', a.title, a.n, a.n === 1 ? 'Yes' : 'No', fmtDate(a.submittedAt), Math.round((a.timeTaken || 0) / 60),
       r.mcq, r.mcqMax, r.writtenCount ? r.wr : '', r.writtenCount ? r.wrMax : '', r.writtenCount ? (r.pending ? `${r.pending} to mark` : 'Marked') : '', r.total, r.max, pct(r.total, r.max)]);
   });
   download(`results-${stamp()}.csv`, csv(rows), 'text/csv;charset=utf-8'); toast('Results exported');
 }
-function exportChapterwise(off, keys, studs) {
-  const rows = [['Student ID', 'Name', ...CHAPTERS.slice(1).map((n, i) => `Ch ${i + 1} ${n} (%)`), 'Overall (%)']];
-  studs.forEach(s => { const pc = chapterWise(off.filter(a => a.sid === s.id), keys); let G = 0, M = 0;
-    rows.push([s.id, s.name, ...CHAPTERS.slice(1).map((_, i) => { const v = pc[i + 1]; if (!v || !v.max) return ''; G += v.got; M += v.max; return pct(v.got, v.max); }), M ? pct(G, M) : '']); });
-  download(`chapterwise-${stamp()}.csv`, csv(rows), 'text/csv;charset=utf-8'); toast('Chapter-wise exported');
+function exportChapterwise(off, keys, studs, g) {
+  const cs = studs.filter(s => studentGrade(s) === g);
+  const chs = chapterNums(g, off.flatMap(a => (a.items || []).map(i => i.chapter)));
+  const rows = [['Student ID', 'Name', ...chs.map(c => `Ch ${c} ${chName(g, c)} (%)`), 'Overall (%)']];
+  cs.forEach(s => { const pc = chapterWise(off.filter(a => a.sid === s.id), keys); let G = 0, M = 0;
+    rows.push([s.id, s.name, ...chs.map(c => { const v = pc[c]; if (!v || !v.max) return ''; G += v.got; M += v.max; return pct(v.got, v.max); }), M ? pct(G, M) : '']); });
+  download(`chapterwise-class${g}-${stamp()}.csv`, csv(rows), 'text/csv;charset=utf-8'); toast('Chapter-wise exported');
+}
+function exportStudents(studs) {
+  const rows = [['Student ID', 'Name', 'Class', 'Date of birth', 'Gender', 'Mobile', 'Email', 'School', 'Address', 'Added on']];
+  studs.forEach(s => rows.push([s.id, s.name, studentGrade(s), s.dob || '', s.gender === 'f' ? 'Female' : 'Male', s.mobile || '', s.email || '', s.school || '', s.address || '', fmtDate(s.createdAt)]));
+  download(`students-${stamp()}.csv`, csv(rows), 'text/csv;charset=utf-8'); toast('Student list exported');
 }
 
 // ---------- TESTS ----------
+// tests/{id}: questions without answers · testKeys/{id}: MCQ answers only (opens after submitting) · testSolutions/{id}: locked until the teacher opens it
 function buildTestDocs(t, qmap) {
   const tm = { ...TYPE_MARKS, ...(t.typeMarks || {}) };
   const qids = t.qids.filter(id => qmap[id]);
   const items = qids.map(id => { const q = qmap[id]; return { qid: id, chapter: q.chapter, type: q.type, marks: Number(tm[q.type] ?? q.marks), stem: q.stem || [], options: q.options || null, parts: q.parts || null }; });
-  const key = {}; qids.forEach(id => { const q = qmap[id]; key[id] = { answer: q.answer ?? null, solution: q.solution || [], finalAnswer: q.finalAnswer || '' }; });
+  const key = {}, sol = {};
+  qids.forEach(id => { const q = qmap[id]; key[id] = { answer: q.type === 'MCQ' ? (q.answer ?? null) : null }; sol[id] = { solution: q.solution || [], finalAnswer: q.finalAnswer || '' }; });
   return {
-    test: clean({ title: t.title, kind: t.kind || 'custom', chapter: t.chapter ?? null, timer: Number(t.timer) || 0, order: t.order ?? 500, typeMarks: tm,
-      qids, items, count: items.length, totalMarks: items.reduce((s, i) => s + i.marks, 0), published: t.published !== false, updatedAt: now() }),
-    key: clean({ items: key, updatedAt: now() })
+    test: clean({ title: t.title, kind: t.kind || 'custom', chapter: t.chapter ?? null, grade: Number(t.grade) || 10, timer: Number(t.timer) || 0, order: t.order ?? 500, typeMarks: tm,
+      qids, items, count: items.length, totalMarks: items.reduce((s, i) => s + i.marks, 0), published: t.published !== false, solutionsOpen: t.solutionsOpen === true, updatedAt: now() }),
+    key: clean({ items: key, updatedAt: now() }),
+    sol: clean({ items: sol, updatedAt: now() })
   };
 }
 async function saveTests(list) {     // list of test definitions with ids
   const qmap = await aQ();
   const ops = [];
-  list.forEach(t => { const { test, key } = buildTestDocs(t, qmap); ops.push(['set', 'tests/' + t.id, test], ['set', 'testKeys/' + t.id, key]); });
-  await commitOps(ops, 8);
+  list.forEach(t => { const { test, key, sol } = buildTestDocs(t, qmap); ops.push(['set', 'tests/' + t.id, test], ['set', 'testKeys/' + t.id, key], ['set', 'testSolutions/' + t.id, sol]); });
+  await commitOps(ops, 9);
   AC.tests = undefined; AC.keys = undefined;
 }
 async function aTestsView() {
@@ -1618,13 +1753,26 @@ async function aTestsView() {
   $('#new').onclick = () => aBuilder(null);
   guard(pg, async () => {
     const [tests, atts] = await Promise.all([aTests(), aAtts()]);
-    const groups = [['chapter', 'Chapter tests'], ['mock', 'Mock tests'], ['custom', 'Your tests']];
-    pg.innerHTML = tests.length ? groups.map(([k, l]) => { const list = tests.filter(t => (t.kind || 'custom') === k); if (!list.length) return '';
-      return `<div class="sectiontitle">${l}</div><div class="card" style="padding:4px 14px">${list.map(t => `<div class="li" data-t="${esc(t.id)}"><div class="grow"><div class="t">${esc(t.title)}</div>
-        <div class="small muted">${t.count} Qs · ${t.totalMarks} marks · ${t.timer ? t.timer + ' min' : 'no timer'} · ${atts.filter(a => a.tid === t.id && a.n === 1).length} taken</div></div>
-        ${t.published === false ? '<span class="chip n">Hidden</span>' : '<span class="chip g">Visible</span>'}</div>`).join('')}</div>`; }).join('')
-      : `<div class="card empty">No tests yet. Import the question bank (Question bank → Import) to add the 14 chapter tests and 2 mocks, or tap “+ Create”.</div>`;
-    $$('[data-t]', pg).forEach(el => el.onclick = () => aBuilder(tests.find(t => t.id === el.dataset.t)));
+    let g = AC.tg || 'all';
+    const draw = () => {
+      const shown = tests.filter(t => g === 'all' || gradeOf(t) === g);
+      const groups = [['chapter', 'Chapter tests'], ['mock', 'Mock tests'], ['custom', 'Your tests']];
+      pg.innerHTML = `${gradeChips(g, true)}<div class="info small">🔒 Solutions stay locked after students submit (they see only their MCQ score). Tap <b>Open solutions</b> when you're ready, or open them for one student from their attempt.</div>
+        ${shown.length ? groups.map(([k, l]) => { const list = shown.filter(t => (t.kind || 'custom') === k); if (!list.length) return '';
+        return `<div class="sectiontitle">${l}</div><div class="card" style="padding:4px 14px">${list.map(t => `<div class="li" data-t="${esc(t.id)}"><div class="grow"><div class="t">${esc(t.title)}</div>
+          <div class="small muted">Class ${gradeOf(t)} · ${t.count} Qs · ${t.totalMarks} marks · ${t.timer ? t.timer + ' min' : 'no timer'} · ${atts.filter(a => a.tid === t.id && a.n === 1).length} taken</div>
+          <div class="chips" style="margin-top:4px">${t.published === false ? '<span class="chip n">Hidden</span>' : '<span class="chip g">Visible</span>'}${t.solutionsOpen ? '<span class="chip">🔓 Solutions open</span>' : '<span class="chip a">🔒 Solutions locked</span>'}</div></div>
+          <button class="btn ${t.solutionsOpen ? 'sec' : ''} sm" data-sol="${esc(t.id)}">${t.solutionsOpen ? 'Lock' : 'Open solutions'}</button></div>`).join('')}</div>`; }).join('')
+        : `<div class="card empty">No tests${g === 'all' ? '' : ` for Class ${g}`} yet. Tap “+ Create”${tests.length ? '' : ', or import the question bank (Question bank → Import) to add the 14 Class 10 chapter tests and 2 mocks'}.</div>`}`;
+      bindGradeChips(pg, v => { g = AC.tg = v; draw(); });
+      $$('[data-t]', pg).forEach(el => el.onclick = () => aBuilder(tests.find(t => t.id === el.dataset.t)));
+      $$('[data-sol]', pg).forEach(b => b.onclick = e => { e.stopPropagation(); busy(b, async () => {
+        const t = tests.find(x => x.id === b.dataset.sol); const v = !(t.solutionsOpen === true);
+        if (v && !(await confirmBox('Open solutions?', `Everyone who has submitted <b>${esc(t.title)}</b> will see the correct answers and detailed solutions. Students who haven't taken it yet will see them as soon as they submit.`, 'Open'))) return;
+        await updateDoc(D('tests/' + t.id), { solutionsOpen: v }); t.solutionsOpen = v; toast(v ? 'Solutions opened' : 'Solutions locked'); draw();
+      }); });
+    };
+    draw();
   });
 }
 async function aBuilder(existing) {
@@ -1632,26 +1780,31 @@ async function aBuilder(existing) {
   guard(pg, async () => {
     const qmap = await aQ();
     const all = Object.values(qmap);
-    const T = existing ? { id: existing.id, title: existing.title, timer: existing.timer || 0, kind: existing.kind, chapter: existing.chapter, order: existing.order, published: existing.published !== false, typeMarks: { ...TYPE_MARKS, ...(existing.typeMarks || {}) }, qids: (existing.qids || []).filter(id => qmap[id]) }
-      : { title: '', timer: 45, kind: 'custom', published: true, typeMarks: { ...TYPE_MARKS }, qids: [] };
+    const T = existing ? { id: existing.id, title: existing.title, timer: existing.timer || 0, kind: existing.kind, chapter: existing.chapter, order: existing.order, grade: gradeOf(existing),
+      published: existing.published !== false, solutionsOpen: existing.solutionsOpen === true, typeMarks: { ...TYPE_MARKS, ...(existing.typeMarks || {}) }, qids: (existing.qids || []).filter(id => qmap[id]) }
+      : { title: '', timer: 45, kind: 'custom', grade: AC.tg && AC.tg !== 'all' ? AC.tg : (AC.g || 10), published: true, solutionsOpen: false, typeMarks: { ...TYPE_MARKS }, qids: [] };
     const counts = {}; TYPES.forEach(k => counts[k] = T.qids.filter(id => qmap[id].type === k).length);
     const F = { ch: new Set(), diff: new Set() };
+    const pool = () => all.filter(q => gradeOf(q) === T.grade);
     const draw = () => {
       const sel = T.qids.map(id => qmap[id]).filter(Boolean).sort(qSort); T.qids = sel.map(q => q.id);
       const have = {}; TYPES.forEach(k => have[k] = sel.filter(q => q.type === k).length);
       const marks = sel.reduce((s, q) => s + Number(T.typeMarks[q.type] || 0), 0);
+      const P = pool(); const chs = chapterNums(T.grade, P.map(q => q.chapter)).filter(c => P.some(q => q.chapter === c));
       pg.innerHTML = `<div class="card"><h3>1. Details</h3>
         <label class="field"><span>Test title</span><input class="input" id="bt" value="${esc(T.title)}" placeholder="e.g. Unit test – Algebra"></label>
-        <div class="grid2"><label class="field"><span>Timer in minutes (0 = no timer)</span><input class="input" id="btm" type="number" min="0" value="${T.timer}"></label>
-        <label class="field"><span>Students can see it</span><select class="input" id="bp"><option value="1" ${T.published ? 'selected' : ''}>Yes, visible</option><option value="0" ${!T.published ? 'selected' : ''}>No, hidden</option></select></label></div></div>
+        <div class="grid2"><label class="field"><span>Class</span><select class="input" id="bg">${gradeOptions(T.grade)}</select></label>
+        <label class="field"><span>Timer in minutes (0 = no timer)</span><input class="input" id="btm" type="number" min="0" value="${T.timer}"></label>
+        <label class="field"><span>Students can see it</span><select class="input" id="bp"><option value="1" ${T.published ? 'selected' : ''}>Yes, visible</option><option value="0" ${!T.published ? 'selected' : ''}>No, hidden</option></select></label>
+        <label class="field"><span>Solutions after submitting</span><select class="input" id="bs"><option value="0" ${!T.solutionsOpen ? 'selected' : ''}>🔒 Locked until I open them</option><option value="1" ${T.solutionsOpen ? 'selected' : ''}>🔓 Open straight away</option></select></label></div></div>
         <div class="card"><div class="row"><h3 class="grow">2. Pattern</h3><button class="btn sec sm" id="cbse">Use CBSE board pattern</button></div>
         <div class="counts"><span class="h">Type</span><span class="h">How many</span><span class="h">Marks each</span><span class="h">Picked</span>
         ${TYPES.map(k => `<span>${TYPE_NAME[k]}</span><input class="input" type="number" min="0" data-c="${k}" value="${counts[k]}"><input class="input" type="number" min="0" step="0.5" data-m="${k}" value="${T.typeMarks[k]}">
           <span class="chip ${have[k] === counts[k] ? 'g' : 'a'}">${have[k]}/${counts[k]}</span>`).join('')}</div>
         <p class="tiny muted">The CBSE pattern needs 2 Assertion–Reason questions. Your bank has none yet, so it uses 20 MCQs.</p></div>
-        <div class="card"><h3>3. Pick questions</h3>
+        <div class="card"><h3>3. Pick questions (Class ${T.grade}: ${P.length} in the bank)</h3>
         <div class="small" style="font-weight:600;margin:4px 0">Chapters (none selected = all)</div>
-        <div class="chips">${CHAPTERS.slice(1).map((_, i) => `<button class="toggle ${F.ch.has(i + 1) ? 'on' : ''}" data-fc="${i + 1}">${i + 1}</button>`).join('')}</div>
+        <div class="chips">${chs.length ? chs.map(c => `<button class="toggle ${F.ch.has(c) ? 'on' : ''}" data-fc="${c}" title="${esc(chName(T.grade, c))}">${c}</button>`).join('') : '<span class="tiny muted">No questions for this class yet. Add them in Question bank (one by one or in bulk from Excel).</span>'}</div>
         <div class="small" style="font-weight:600;margin:10px 0 4px">Difficulty (none selected = any)</div>
         <div class="chips">${['Easy', 'Medium', 'Hard'].map(d => `<button class="toggle ${F.diff.has(d) ? 'on' : ''}" data-fd="${d}">${d}</button>`).join('')}</div>
         <div class="row wrap" style="margin-top:12px"><button class="btn" id="rand">🎲 Fill randomly</button><button class="btn sec" id="man">Pick by hand</button><button class="btn ghost" id="clr">Clear all</button></div></div>
@@ -1660,8 +1813,15 @@ async function aBuilder(existing) {
         <div id="berr"></div><button class="btn block" id="bsave">Save test</button>
         ${existing ? '<div class="sp"></div><button class="btn danger block" id="bdel">Delete this test</button>' : ''}`;
       $('#bt').oninput = e => T.title = e.target.value;
+      $('#bg').onchange = async e => {
+        const ng = Number(e.target.value);
+        const other = T.qids.filter(id => gradeOf(qmap[id]) !== ng);
+        if (other.length && !(await confirmBox('Change class?', `${other.length} picked question${other.length > 1 ? 's are' : ' is'} from another class and will be removed from this test.`, 'Change'))) { e.target.value = T.grade; return; }
+        T.grade = ng; T.qids = T.qids.filter(id => gradeOf(qmap[id]) === ng); F.ch.clear(); draw();
+      };
       $('#btm').oninput = e => T.timer = Math.max(0, Number(e.target.value) || 0);
       $('#bp').onchange = e => T.published = e.target.value === '1';
+      $('#bs').onchange = e => T.solutionsOpen = e.target.value === '1';
       $$('[data-c]', pg).forEach(i => i.onchange = () => { counts[i.dataset.c] = Math.max(0, Number(i.value) || 0); draw(); });
       $$('[data-m]', pg).forEach(i => i.onchange = () => { T.typeMarks[i.dataset.m] = Math.max(0, Number(i.value) || 0); draw(); });
       $('#cbse').onclick = () => { Object.assign(counts, { MCQ: 20, VSA: 5, SA: 6, LA: 4, CASE: 3 }); T.typeMarks = { ...TYPE_MARKS }; T.timer = 180; if (!T.title) T.title = 'Board pattern paper'; draw(); toast('CBSE pattern: 38 questions, 80 marks, 3 hours'); };
@@ -1673,13 +1833,13 @@ async function aBuilder(existing) {
         const short = [];
         TYPES.forEach(k => {
           const need = counts[k] - T.qids.filter(id => qmap[id].type === k).length; if (need <= 0) return;
-          const pool = all.filter(q => q.type === k && !T.qids.includes(q.id) && (!F.ch.size || F.ch.has(q.chapter)) && (!F.diff.size || F.diff.has(q.difficulty)));
-          const pick = shuffled(pool, Math.floor(Math.random() * 1e9)).slice(0, need); T.qids.push(...pick.map(q => q.id));
+          const cand = pool().filter(q => q.type === k && !T.qids.includes(q.id) && (!F.ch.size || F.ch.has(q.chapter)) && (!F.diff.size || F.diff.has(q.difficulty)));
+          const pick = shuffled(cand, Math.floor(Math.random() * 1e9)).slice(0, need); T.qids.push(...pick.map(q => q.id));
           if (pick.length < need) short.push(`${TYPE_NAME[k]}: only ${pick.length} of ${need}`);
         });
         draw(); toast(short.length ? 'Not enough questions — ' + short.join('; ') : 'Filled randomly', short.length ? 5000 : 2200);
       };
-      $('#man').onclick = () => pickByHand(all, T, counts, draw);
+      $('#man').onclick = () => pickByHand(pool(), T, counts, draw);
       $('#bsave').onclick = () => busy($('#bsave'), async () => {
         const err = m => $('#berr').innerHTML = `<div class="err">${esc(m)}</div>`;
         if (!T.title.trim()) return err('Give the test a title.');
@@ -1696,7 +1856,7 @@ async function aBuilder(existing) {
       });
       if ($('#bdel')) $('#bdel').onclick = async () => {
         if (!(await confirmBox('Delete this test?', 'Students will no longer see it. Their past attempts stay in your results and exports.', 'Delete', true))) return;
-        await busy($('#bdel'), async () => { await commitOps([['delete', 'tests/' + existing.id], ['delete', 'testKeys/' + existing.id]]); AC.tests = undefined; AC.keys = undefined; toast('Deleted'); aTestsView(); });
+        await busy($('#bdel'), async () => { await commitOps([['delete', 'tests/' + existing.id], ['delete', 'testKeys/' + existing.id], ['delete', 'testSolutions/' + existing.id]]); AC.tests = undefined; AC.keys = undefined; toast('Deleted'); aTestsView(); });
       };
     };
     draw();
@@ -1704,12 +1864,13 @@ async function aBuilder(existing) {
 }
 function pickByHand(all, T, counts, redraw) {
   const f = { type: '', ch: '', diff: '', s: '' };
-  modal(`<h3>Pick questions</h3><div class="grid2"><select class="input" id="pt"><option value="">All types</option>${TYPES.map(k => `<option value="${k}">${TYPE_NAME[k]}</option>`).join('')}</select>
-    <select class="input" id="pc"><option value="">All chapters</option>${CHAPTERS.slice(1).map((n, i) => `<option value="${i + 1}">${i + 1}. ${esc(n)}</option>`).join('')}</select>
+  const chs = [...new Set(all.map(q => q.chapter))].sort((a, b) => a - b);
+  modal(`<h3>Pick questions · Class ${T.grade}</h3><div class="grid2"><select class="input" id="pt"><option value="">All types</option>${TYPES.map(k => `<option value="${k}">${TYPE_NAME[k]}</option>`).join('')}</select>
+    <select class="input" id="pc"><option value="">All chapters</option>${chs.map(c => `<option value="${c}">${c}. ${esc(chName(T.grade, c))}</option>`).join('')}</select>
     <select class="input" id="pd"><option value="">Any difficulty</option><option>Easy</option><option>Medium</option><option>Hard</option></select><input class="input" id="ps" placeholder="Search text"></div>
     <div id="pcnt" class="chips" style="margin:10px 0"></div><div id="plist" style="max-height:48vh;overflow:auto"></div><div class="sp"></div><button class="btn block" data-c>Done</button>`, (m, close) => {
     const draw = () => {
-      $('#pcnt', m).innerHTML = TYPES.map(k => `<span class="chip ${T.qids.filter(id => all.find(q => q.id === id && q.type === k)).length === counts[k] ? 'g' : 'n'}">${k} ${T.qids.filter(id => all.find(q => q.id === id && q.type === k)).length}/${counts[k]}</span>`).join('');
+      $('#pcnt', m).innerHTML = TYPES.map(k => { const n = T.qids.filter(id => all.find(q => q.id === id && q.type === k)).length; return `<span class="chip ${n === counts[k] ? 'g' : 'n'}">${k} ${n}/${counts[k]}</span>`; }).join('');
       const list = all.filter(q => (!f.type || q.type === f.type) && (!f.ch || q.chapter === Number(f.ch)) && (!f.diff || q.difficulty === f.diff) && (!f.s || plainText(q.stem, 999).toLowerCase().includes(f.s))).sort(qSort);
       $('#plist', m).innerHTML = list.map(q => `<label class="qrow" style="cursor:pointer"><input type="checkbox" data-q="${esc(q.id)}" ${T.qids.includes(q.id) ? 'checked' : ''}>
         <div class="qx"><div class="tiny muted">${q.type} · Ch ${q.chapter} · ${esc(q.difficulty || '')} · ${esc(q.id)}</div><div class="clip">${esc(plainText(q.stem, 160))}</div></div></label>`).join('') || '<div class="empty">No questions match.</div>';
@@ -1729,25 +1890,34 @@ async function aQuestionsView() {
   guard(pg, async () => {
     const qmap = await aQ();
     const all = Object.values(qmap);
-    const f = AC.qf || (AC.qf = { type: '', ch: '', diff: '', s: '' });
-    pg.innerHTML = `<div class="card"><div class="row wrap"><div class="grow"><b>${all.length} questions</b><div class="small muted">${TYPES.map(k => `${k}: ${all.filter(q => q.type === k).length}`).join(' · ')}</div></div>
-      <label class="btn sec sm" style="cursor:pointer">⬆ Import question bank file<input type="file" id="imp" accept=".json,application/json" hidden></label></div></div>
-      <div class="grid2" style="margin-top:12px"><select class="input" id="ft"><option value="">All types</option>${TYPES.map(k => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${TYPE_NAME[k]}</option>`).join('')}</select>
-      <select class="input" id="fc"><option value="">All chapters</option>${CHAPTERS.slice(1).map((n, i) => `<option value="${i + 1}" ${String(f.ch) === String(i + 1) ? 'selected' : ''}>${i + 1}. ${esc(n)}</option>`).join('')}</select>
-      <select class="input" id="fd"><option value="">Any difficulty</option>${['Easy', 'Medium', 'Hard'].map(d => `<option ${f.diff === d ? 'selected' : ''}>${d}</option>`).join('')}</select><input class="input" id="fs" placeholder="Search" value="${esc(f.s)}"></div>
-      <div class="sp"></div><div class="card" style="padding:4px 14px" id="ql"></div>`;
-    const draw = () => {
-      const list = all.filter(q => (!f.type || q.type === f.type) && (!f.ch || q.chapter === Number(f.ch)) && (!f.diff || q.difficulty === f.diff) && (!f.s || (q.id + ' ' + plainText(q.stem, 999)).toLowerCase().includes(f.s)))
-        .sort((a, b) => a.chapter - b.chapter || (a.num || 0) - (b.num || 0));
-      $('#ql').innerHTML = list.length ? list.map(q => `<div class="qrow" style="cursor:pointer" data-q="${esc(q.id)}"><span class="chip n">${q.type}</span><div class="qx">
-        <div class="tiny muted">Ch ${q.chapter} · Q${q.num || '–'} · ${q.marks} mark${q.marks > 1 ? 's' : ''} · ${esc(q.difficulty || '')}</div><div class="clip">${esc(plainText(q.stem, 160))}</div></div></div>`).join('')
-        : `<div class="empty">${all.length ? 'No questions match.' : 'The bank is empty. Tap “Import question bank file” and choose question-bank.json.'}</div>`;
-      $$('[data-q]', pg).forEach(el => el.onclick = () => aQEditor(qmap[el.dataset.q]));
+    const f = AC.qf || (AC.qf = { g: AC.g || 10, type: '', ch: '', diff: '', s: '' });
+    const shell = () => {
+      const inG = all.filter(q => f.g === 'all' || gradeOf(q) === f.g);
+      const chs = f.g === 'all' ? [] : chapterNums(f.g, inG.map(q => q.chapter));
+      pg.innerHTML = `<div class="card"><div class="row wrap"><div class="grow"><b>${all.length} questions</b><div class="small muted">${GRADES.map(g => [g, all.filter(q => gradeOf(q) === g).length]).filter(([, n]) => n).map(([g, n]) => `Class ${g}: ${n}`).join(' · ') || 'None yet'}</div></div>
+        <button class="btn sm" id="bulk">⬆ Bulk add from Excel</button><label class="btn sec sm" style="cursor:pointer">⬆ Import bank file (.json)<input type="file" id="imp" accept=".json,application/json" hidden></label></div></div>
+        <div class="sp"></div>${gradeChips(f.g, true)}
+        <div class="grid2"><select class="input" id="ft"><option value="">All types</option>${TYPES.map(k => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${TYPE_NAME[k]}</option>`).join('')}</select>
+        <select class="input" id="fc" ${f.g === 'all' ? 'disabled' : ''}><option value="">All chapters</option>${chs.map(c => `<option value="${c}" ${String(f.ch) === String(c) ? 'selected' : ''}>${c}. ${esc(chName(f.g, c))}</option>`).join('')}</select>
+        <select class="input" id="fd"><option value="">Any difficulty</option>${['Easy', 'Medium', 'Hard'].map(d => `<option ${f.diff === d ? 'selected' : ''}>${d}</option>`).join('')}</select><input class="input" id="fs" placeholder="Search" value="${esc(f.s)}"></div>
+        <div class="sp"></div><div class="card" style="padding:4px 14px" id="ql"></div>`;
+      const draw = () => {
+        const list = inG.filter(q => (!f.type || q.type === f.type) && (f.g === 'all' || !f.ch || q.chapter === Number(f.ch)) && (!f.diff || q.difficulty === f.diff) && (!f.s || (q.id + ' ' + plainText(q.stem, 999)).toLowerCase().includes(f.s)))
+          .sort((a, b) => gradeOf(a) - gradeOf(b) || a.chapter - b.chapter || (a.num || 0) - (b.num || 0));
+        $('#ql').innerHTML = list.length ? list.slice(0, 400).map(q => `<div class="qrow" style="cursor:pointer" data-q="${esc(q.id)}"><span class="chip n">${q.type}</span><div class="qx">
+          <div class="tiny muted">Class ${gradeOf(q)} · Ch ${q.chapter} · Q${q.num || '–'} · ${q.marks} mark${q.marks > 1 ? 's' : ''} · ${esc(q.difficulty || '')}</div><div class="clip">${esc(plainText(q.stem, 160))}</div></div></div>`).join('')
+          + (list.length > 400 ? `<div class="empty">Showing 400 of ${list.length}. Use the filters to narrow down.</div>` : '')
+          : `<div class="empty">${all.length ? 'No questions match.' : 'The bank is empty. Tap “Import bank file” and choose question-bank.json, or “Bulk add from Excel”.'}</div>`;
+        $$('[data-q]', pg).forEach(el => el.onclick = () => aQEditor(qmap[el.dataset.q]));
+      };
+      bindGradeChips(pg, v => { f.g = v; f.ch = ''; if (v !== 'all') AC.g = v; shell(); });
+      $('#ft').onchange = e => { f.type = e.target.value; draw(); }; $('#fc').onchange = e => { f.ch = e.target.value; draw(); };
+      $('#fd').onchange = e => { f.diff = e.target.value; draw(); }; $('#fs').oninput = e => { f.s = e.target.value.trim().toLowerCase(); draw(); };
+      $('#imp').onchange = e => { const file = e.target.files[0]; if (file) importBank(file); };
+      $('#bulk').onclick = () => bulkImport();
+      draw();
     };
-    $('#ft').onchange = e => { f.type = e.target.value; draw(); }; $('#fc').onchange = e => { f.ch = e.target.value; draw(); };
-    $('#fd').onchange = e => { f.diff = e.target.value; draw(); }; $('#fs').oninput = e => { f.s = e.target.value.trim().toLowerCase(); draw(); };
-    $('#imp').onchange = e => { const file = e.target.files[0]; if (file) importBank(file); };
-    draw();
+    shell();
   });
 }
 async function importBank(file) {
@@ -1766,16 +1936,179 @@ async function importBank(file) {
       say(`Figures ${Math.min(i + 6, imgs.length)}/${imgs.length}`);
     }
     for (let i = 0; i < data.questions.length; i += 15) {
-      await commitOps(data.questions.slice(i, i + 15).map(q => { const { id, ...rest } = q; return ['set', 'questions/' + id, clean({ ...rest, updatedAt: now() })]; }));
+      await commitOps(data.questions.slice(i, i + 15).map(q => { const { id, ...rest } = q; return ['set', 'questions/' + id, clean({ ...rest, grade: Number(rest.grade) || 10, updatedAt: now() })]; }));
       say(`Questions ${Math.min(i + 15, data.questions.length)}/${data.questions.length}`);
     }
     AC.q = undefined; await aQ(true);
     say('Tests…');
-    await saveTests((data.tests || []).map(t => ({ ...t, published: true })));
+    await saveTests((data.tests || []).map(t => ({ ...t, grade: Number(t.grade) || 10, published: true, solutionsOpen: false })));
     close();
-    modal(`<h3>Import complete ✓</h3><p>${data.questions.length} questions and ${(data.tests || []).length} tests are ready. Students can see the tests now.</p><p class="small muted">Keep question-bank.json safe on your computer. Don't upload it to your website: it contains the answers.</p><button class="btn block" data-c>OK</button>`, (m, c) => m.querySelector('[data-c]').onclick = () => { c(); aQuestionsView(); });
+    modal(`<h3>Import complete ✓</h3><p>${data.questions.length} questions and ${(data.tests || []).length} tests are ready. Students can see the tests now; solutions stay locked until you open them.</p><p class="small muted">Keep the file safe on your computer. Don't upload it to your website: it contains the answers.</p><button class="btn block" data-c>OK</button>`, (m, c) => m.querySelector('[data-c]').onclick = () => { c(); aQuestionsView(); });
   } catch (e) { close(); console.error(e); toast('Import stopped: ' + errMsg(e), 6000); }
 }
+
+// ---------- BULK ADD FROM EXCEL ----------
+const XLSX_URLS = ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'];
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+async function getXLSX() {
+  for (const u of XLSX_URLS) { if (window.XLSX) break; try { await loadScript(u); } catch { } }
+  if (!window.XLSX) throw new Error('Could not load the Excel reader. Check your internet and try again.');
+  return window.XLSX;
+}
+const BULK_COLS = ['Class', 'Chapter', 'Type', 'Marks', 'Difficulty', 'Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct option', 'Part 1', 'Part 2', 'Part 3', 'Part 4', 'Part marks', 'Solution', 'Final answer'];
+async function downloadTemplate() {
+  const X = await getXLSX();
+  const rows = [BULK_COLS,
+    [8, 1, 'MCQ', 1, 'Easy', 'Which of these is a rational number?', '√2', 'π', '3/4', '√5', 'c', '', '', '', '', '', '3/4 can be written as p/q with q ≠ 0.', ''],
+    [8, 2, 'VSA', 2, 'Medium', 'Solve: 2x + 5 = 17', '', '', '', '', '', '', '', '', '', '', '2x = 17 − 5 = 12\nx = 12 ÷ 2', 'x = 6'],
+    [9, 3, 'SA', 3, 'Medium', 'Find the value of $\\frac{1}{2} + \\frac{1}{3}$ and simplify.', '', '', '', '', '', '', '', '', '', '', '$\\frac{1}{2} + \\frac{1}{3} = \\frac{3 + 2}{6}$', '5/6'],
+    [10, 13, 'CASE', 4, 'Medium', 'A survey of 40 families recorded the number of children in each family.', '', '', '', '', '', 'Find the mode.', 'Find the median.', 'Find the mean.', '', '1,1,2', 'Mode = 2, median = 2, mean = 2.1', 'Mode 2, median 2, mean 2.1']];
+  const help = [['How to fill the Questions sheet'],
+    ['One question per row. Keep the header row exactly as it is.'],
+    ['Class: 6 to 12. Chapter: the chapter number (see Classes & chapters in the app).'],
+    ['Type: MCQ, VSA (2 marks), SA (3 marks), LA (5 marks) or CASE (case-based).'],
+    ['Marks: leave empty to use 1, 2, 3, 5 or 4 by type. Difficulty: Easy, Medium or Hard (optional).'],
+    ['MCQ: fill Option A to D and write the correct option as a, b, c or d.'],
+    ['CASE: put each sub-question in Part 1, Part 2, ... and their marks in Part marks, e.g. 1,1,2.'],
+    ['Solution: press Alt + Enter inside a cell for a new line. Final answer: shown in a green box and next to the student’s answer when you mark.'],
+    ['Maths: type it plainly (x², √5, θ, 3/4) or between dollar signs, e.g. $\\frac{1}{2}$ or $x^2 + 5x + 6 = 0$.'],
+    ['The cells of the Questions sheet are set to Text, so Excel will not turn 3/4 into a date. If you paste into a new sheet and Excel shows a date, the app will point out that row.'],
+    ['Figures: add them afterwards in the app (Question bank → open the question → Add figure).'],
+    ['Delete the four example rows before uploading.']];
+  const wb = X.utils.book_new();
+  const ws = X.utils.aoa_to_sheet(rows);
+  // text columns as Text, so Excel keeps 3/4, 1-2 or 0.50 exactly as typed (Class, Chapter, Marks stay numbers)
+  const numCols = [0, 1, 3];
+  for (let r = 0; r <= 400; r++) for (let c = 0; c < BULK_COLS.length; c++) {
+    if (numCols.includes(c) && r > 0) continue;
+    const a = X.utils.encode_cell({ r, c });
+    if (!ws[a]) ws[a] = { t: 's', v: '' };
+    if (ws[a].t === 'n') { ws[a].t = 's'; ws[a].v = String(ws[a].v); }
+    ws[a].z = '@';
+  }
+  ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 400, c: BULK_COLS.length - 1 } });
+  ws['!cols'] = BULK_COLS.map(c => ({ wch: ['Question', 'Solution'].includes(c) ? 50 : c.startsWith('Option') || c.startsWith('Part ') ? 18 : 12 }));
+  X.utils.book_append_sheet(wb, ws, 'Questions');
+  const hs = X.utils.aoa_to_sheet(help); hs['!cols'] = [{ wch: 110 }];
+  X.utils.book_append_sheet(wb, hs, 'How to fill');
+  X.writeFile(wb, 'maths-by-ssk-question-template.xlsx');
+}
+function normType(v) {
+  const s = String(v || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (['mcq', 'objective', 'multiplechoice', '1', '1mark'].includes(s)) return 'MCQ';
+  if (['vsa', 'veryshort', 'veryshortanswer', 'sa1', 'shortanswer1', '2', '2marks', '2mark'].includes(s)) return 'VSA';
+  if (['sa', 'short', 'shortanswer', 'sa2', 'shortanswer2', '3', '3marks', '3mark'].includes(s)) return 'SA';
+  if (['la', 'long', 'longanswer', '5', '5marks', '5mark'].includes(s)) return 'LA';
+  if (['case', 'casebased', 'casestudy', 'cs', '4', '4marks', '4mark'].includes(s)) return 'CASE';
+  return null;
+}
+function parseBulkRows(table, qmap, dateCells = {}) {
+  const head = (table[0] || []).map(h => String(h).trim().toLowerCase().replace(/\s+/g, ' '));
+  const col = name => { const n = name.toLowerCase(); const alias = { class: ['class', 'grade'], 'correct option': ['correct option', 'correct', 'answer', 'key'] }[n] || [n]; return head.findIndex(h => alias.includes(h)); };
+  const idx = Object.fromEntries(BULK_COLS.map(c => [c, col(c)]));
+  const missing = ['Class', 'Chapter', 'Type', 'Question'].filter(c => idx[c] < 0);
+  if (missing.length) return { fatal: `The first row must be the header row. Missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Download the template and copy your questions into it.` };
+  const get = (r, c) => idx[c] < 0 ? '' : String(r[idx[c]] ?? '').replace(/\r/g, '').trim();
+  const ok = [], bad = [], dup = [];
+  const nextNum = {};
+  Object.values(qmap).forEach(q => { const k = gradeOf(q) + '_' + q.chapter; nextNum[k] = Math.max(nextNum[k] || 0, q.num || 0); });
+  // same class + chapter + type + question text = already in the bank (so a corrected file can be uploaded again)
+  const sig = (g, ch, type, blocks) => [g, ch, type, blocksToText(blocks).toLowerCase().replace(/\s+/g, ' ').trim()].join('|');
+  const seen = new Set(Object.values(qmap).map(q => sig(gradeOf(q), Number(q.chapter), q.type, q.stem)));
+  table.slice(1).forEach((r, i) => {
+    const rowNo = i + 2;
+    if (!r || r.every(c => String(c ?? '').trim() === '')) return;
+    const probs = [];
+    if (dateCells[i + 1]) probs.push(`Excel changed ${dateCells[i + 1].join(', ')} into a date. Type it again with an apostrophe first, e.g. '3/4`);
+    const g = Number(get(r, 'Class').replace(/[^0-9]/g, ''));
+    if (!GRADES.includes(g)) probs.push('Class must be 6 to 12');
+    const ch = Number(get(r, 'Chapter').replace(/[^0-9]/g, ''));
+    if (!(ch >= 1 && ch <= 40)) probs.push('Chapter must be a number');
+    const type = normType(get(r, 'Type'));
+    if (!type) probs.push('Type must be MCQ, VSA, SA, LA or CASE');
+    const qtext = get(r, 'Question');
+    if (!qtext) probs.push('Question is empty');
+    const marks = get(r, 'Marks') ? Number(get(r, 'Marks')) : (type ? TYPE_MARKS[type] : 1);
+    if (!(marks > 0)) probs.push('Marks must be a number');
+    const dRaw = get(r, 'Difficulty').toLowerCase();
+    const difficulty = dRaw.startsWith('e') ? 'Easy' : dRaw.startsWith('m') ? 'Medium' : dRaw.startsWith('h') ? 'Hard' : '';
+    let options = null, answer = null, parts = null;
+    if (type === 'MCQ') {
+      options = ['Option A', 'Option B', 'Option C', 'Option D'].map(c => get(r, c));
+      if (options.some(o => !o)) probs.push('MCQ needs all four options');
+      const a = get(r, 'Correct option').toLowerCase().replace(/[()\s.]/g, '').replace(/^option/, '');
+      answer = { a: 0, b: 1, c: 2, d: 3, 1: 0, 2: 1, 3: 2, 4: 3 }[a];
+      if (answer == null) { probs.push('Correct option must be a, b, c or d'); answer = null; }
+    }
+    if (type === 'CASE') {
+      const ps = ['Part 1', 'Part 2', 'Part 3', 'Part 4'].map(c => get(r, c)).filter(Boolean);
+      if (!ps.length) probs.push('Case-based question needs at least Part 1');
+      const pm = get(r, 'Part marks').split(/[,;/ ]+/).filter(Boolean).map(Number);
+      const defaults = ps.length === 3 ? [1, 1, 2] : ps.map(() => Math.max(1, Math.round(marks / Math.max(1, ps.length))));
+      parts = ps.map((x, k) => ({ label: ['i', 'ii', 'iii', 'iv'][k], x, marks: pm[k] > 0 ? pm[k] : defaults[k] }));
+    }
+    const solution = textToBlocks(get(r, 'Solution'));
+    const fin = get(r, 'Final answer');
+    if (fin && !solution.some(b => b.t === 'ans')) solution.push({ t: 'ans', x: fin });
+    if (probs.length) { bad.push({ rowNo, probs, preview: qtext.slice(0, 70) }); return; }
+    const sg = sig(g, ch, type, textToBlocks(qtext));
+    if (seen.has(sg)) { dup.push(rowNo); return; }
+    seen.add(sg);
+    const k = g + '_' + ch; nextNum[k] = (nextNum[k] || 0) + 1;
+    const num = nextNum[k];
+    const id = `g${pad(g)}c${pad(ch)}q${pad(num)}`;
+    ok.push({ id, grade: g, chapter: ch, num, type, marks, difficulty, stem: textToBlocks(qtext), options, answer: type === 'MCQ' ? answer : null, parts,
+      solution, finalAnswer: type === 'MCQ' ? '' : solution.filter(b => b.t === 'ans').map(b => b.x).join(' · '), source: 'excel' });
+  });
+  return { ok, bad, dup };
+}
+function bulkImport() {
+  modal(`<h3>Bulk add questions from Excel</h3>
+    <ol class="small" style="padding-left:18px;margin:6px 0 12px;color:var(--ink2)"><li>Download the template and fill one question per row (Class, Chapter, Type, Question, options, answer, solution).</li>
+    <li>Save it, then choose the file below. The app checks every row before adding anything.</li></ol>
+    <div class="row wrap"><button class="btn sec" id="tpl">⬇ Download Excel template</button><label class="btn" style="cursor:pointer">⬆ Choose filled file<input type="file" id="bf" accept=".xlsx,.xls,.csv" hidden></label></div>
+    <div id="bres" style="margin-top:14px"></div><div class="sp"></div><button class="btn ghost block" data-c>Close</button>`, (m, close) => {
+    m.querySelector('[data-c]').onclick = close;
+    $('#tpl', m).onclick = () => busy($('#tpl', m), downloadTemplate);
+    $('#bf', m).onchange = e => busy(null, async () => {
+      const file = e.target.files[0]; if (!file) return;
+      e.target.value = '';                                   // lets the same file be chosen again after fixing it
+      const X = await getXLSX();
+      const isCsv = /\.csv$/i.test(file.name);
+      const wb = X.read(await file.arrayBuffer(), { type: 'array', raw: isCsv, cellNF: true, codepage: 65001 });
+      const ws = wb.Sheets['Questions'] || wb.Sheets[wb.SheetNames[0]];
+      const table = X.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false, blankrows: true });
+      // cells Excel silently turned into dates (e.g. 3/4 -> 4-Mar), outside the Class/Chapter/Marks columns
+      const dateCells = {};
+      if (!isCsv && ws['!ref']) {
+        const rg = X.utils.decode_range(ws['!ref']);
+        for (let R = rg.s.r + 1; R <= rg.e.r; R++) for (let C = rg.s.c; C <= rg.e.c; C++) {
+          const cell = ws[X.utils.encode_cell({ r: R, c: C })];
+          if (cell && (cell.t === 'd' || (cell.t === 'n' && cell.z && X.SSF.is_date(cell.z)))) {
+            const h = String((table[0] || [])[C] || X.utils.encode_col(C));
+            (dateCells[R - rg.s.r] = dateCells[R - rg.s.r] || []).push(h);
+          }
+        }
+      }
+      const qmap = await aQ();
+      const res = parseBulkRows(table, qmap, dateCells);
+      const box = $('#bres', m);
+      if (res.fatal) { box.innerHTML = `<div class="err">${esc(res.fatal)}</div>`; return; }
+      const { ok, bad, dup } = res;
+      const summary = {}; ok.forEach(q => { const k = `Class ${q.grade} · Ch ${q.chapter}`; summary[k] = summary[k] || {}; summary[k][q.type] = (summary[k][q.type] || 0) + 1; });
+      box.innerHTML = `<div class="${ok.length ? 'info' : 'err'}"><b>${ok.length} question${ok.length === 1 ? '' : 's'} ready to add</b>${bad.length ? ` · <b>${bad.length} row${bad.length === 1 ? '' : 's'} with problems</b> (these will be skipped)` : ''}${dup.length ? `<br>${dup.length} row${dup.length === 1 ? ' is' : 's are'} already in the bank and will be skipped (row${dup.length === 1 ? '' : 's'} ${dup.slice(0, 12).join(', ')}${dup.length > 12 ? '…' : ''}).` : ''}</div>
+        ${ok.length ? `<div class="tblwrap" style="max-height:24vh"><table class="tbl"><tr><th>Class / chapter</th>${TYPES.map(t => `<th class="num">${t}</th>`).join('')}</tr>${Object.entries(summary).map(([k, v]) => `<tr><td>${esc(k)}</td>${TYPES.map(t => `<td class="num">${v[t] || ''}</td>`).join('')}</tr>`).join('')}</table></div>` : ''}
+        ${bad.length ? `<div class="sectiontitle" style="margin-top:12px">Rows to fix</div><div class="tblwrap" style="max-height:24vh"><table class="tbl"><tr><th>Row</th><th>Problem</th><th>Question</th></tr>${bad.map(b => `<tr><td>${b.rowNo}</td><td>${esc(b.probs.join('; '))}</td><td class="muted">${esc(b.preview)}</td></tr>`).join('')}</table></div>` : ''}
+        ${ok.length ? `<div class="sp"></div><button class="btn green block" id="bgo">Add ${ok.length} question${ok.length === 1 ? '' : 's'}</button>` : ''}`;
+      if ($('#bgo', m)) $('#bgo', m).onclick = () => busy($('#bgo', m), async () => {
+        for (let i = 0; i < ok.length; i += 15) await commitOps(ok.slice(i, i + 15).map(q => { const { id, ...rest } = q; return ['set', 'questions/' + id, clean({ ...rest, updatedAt: now() })]; }));
+        AC.q = undefined; close();
+        modal(`<h3>Added ${ok.length} questions ✓</h3><p class="small">To make a test from them: <b>Tests → + Create</b>, choose the class, then <b>Fill randomly</b> or <b>Pick by hand</b>.</p><button class="btn block" data-c>OK</button>`, (m2, c2) => m2.querySelector('[data-c]').onclick = () => { c2(); aQuestionsView(); });
+      });
+    });
+  });
+}
+
 async function compressImage(file) {
   const url = URL.createObjectURL(file);
   const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
@@ -1790,14 +2123,17 @@ async function compressImage(file) {
 }
 function aQEditor(q) {
   const isNew = !q;
-  q = q || { chapter: Number((AC.qf && AC.qf.ch) || 1), type: 'MCQ', marks: 1, difficulty: 'Medium', stem: [], options: ['', '', '', ''], answer: 0, parts: null, solution: [] };
+  const f = AC.qf || {};
+  q = q || { grade: f.g && f.g !== 'all' ? f.g : (AC.g || 10), chapter: Number(f.ch || 1), type: 'MCQ', marks: 1, difficulty: 'Medium', stem: [], options: ['', '', '', ''], answer: 0, parts: null, solution: [] };
   const Q = JSON.parse(JSON.stringify(q));
+  Q.grade = gradeOf(Q);
   if (!Q.options || Q.options.length < 4) Q.options = [...(Q.options || []), '', '', '', ''].slice(0, 4);
   if (!Q.parts) Q.parts = [];
   const pg = aShell('questions', isNew ? 'Add question' : `Edit ${q.id}`, '', { back: () => aQuestionsView() });
   const draw = () => {
     pg.innerHTML = `<div class="card"><div class="grid2">
-        <label class="field"><span>Chapter</span><select class="input" id="qc">${CHAPTERS.slice(1).map((n, i) => `<option value="${i + 1}" ${Q.chapter === i + 1 ? 'selected' : ''}>${i + 1}. ${esc(n)}</option>`).join('')}</select></label>
+        <label class="field"><span>Class</span><select class="input" id="qg">${gradeOptions(Q.grade)}</select></label>
+        <label class="field"><span>Chapter</span><select class="input" id="qc">${chapterOptions(Q.grade, Q.chapter, [Q.chapter])}</select></label>
         <label class="field"><span>Type</span><select class="input" id="qt">${TYPES.map(k => `<option value="${k}" ${Q.type === k ? 'selected' : ''}>${TYPE_NAME[k]}</option>`).join('')}</select></label>
         <label class="field"><span>Marks</span><input class="input" id="qm" type="number" min="0.5" step="0.5" value="${Q.marks}"></label>
         <label class="field"><span>Difficulty</span><select class="input" id="qd">${['Easy', 'Medium', 'Hard', ''].map(d => `<option value="${d}" ${Q.difficulty === d ? 'selected' : ''}>${d || '(not set)'}</option>`).join('')}</select></label></div>
@@ -1817,12 +2153,13 @@ function aQEditor(q) {
       <div id="qerr"></div><button class="btn block" id="qsave">Save question</button>
       ${isNew ? '' : '<div class="sp"></div><button class="btn danger block" id="qdel">Delete question</button>'}`;
     const read = () => {
-      Q.chapter = Number($('#qc').value); Q.type = $('#qt').value; Q.marks = Number($('#qm').value) || 1; Q.difficulty = $('#qd').value;
+      Q.grade = Number($('#qg').value); Q.chapter = Number($('#qc').value); Q.type = $('#qt').value; Q.marks = Number($('#qm').value) || 1; Q.difficulty = $('#qd').value;
       Q.stem = textToBlocks($('#qs').value); Q.solution = textToBlocks($('#qsol').value);
       if ($('[data-o]')) { Q.options = $$('[data-o]').map(i => i.value.trim()); const r = $('input[name=ans]:checked'); Q.answer = r ? Number(r.value) : null; }
       $$('[data-pt]').forEach(i => Q.parts[i.dataset.pt].x = i.value.trim()); $$('[data-pm]').forEach(i => Q.parts[i.dataset.pm].marks = Number(i.value) || 0);
     };
     const preview = () => { read(); $('#pv').innerHTML = questionHtml({ ...Q, options: Q.type === 'MCQ' ? Q.options : null }, { reveal: Q.type === 'MCQ', answer: Q.answer }) + `<div class="solbody qtext" style="margin-top:10px">${renderBlocks(Q.solution)}</div>`; fillImages($('#pv')); };
+    $('#qg').onchange = () => { read(); Q.chapter = 1; draw(); };
     $('#qt').onchange = () => { read(); Q.marks = TYPE_MARKS[Q.type]; if (Q.type === 'CASE' && !Q.parts.length) Q.parts = [{ label: 'i', x: '', marks: 1 }, { label: 'ii', x: '', marks: 1 }, { label: 'iii', x: '', marks: 2 }]; draw(); };
     $('#prev').onclick = preview;
     if ($('#padd')) $('#padd').onclick = () => { read(); Q.parts.push({ label: ['i', 'ii', 'iii', 'iv', 'v', 'vi'][Q.parts.length] || String(Q.parts.length + 1), x: '', marks: 1 }); draw(); };
@@ -1840,9 +2177,13 @@ function aQEditor(q) {
       if (Q.type === 'MCQ' && (Q.options.some(o => !o) || Q.answer == null)) return err('Fill all four options and tick the correct one.');
       const qmap = await aQ();
       let id = q.id;
-      if (!id) { const nums = Object.values(qmap).filter(x => x.chapter === Q.chapter).map(x => x.num || 0); Q.num = Math.max(10, ...nums) + 1; id = `c${pad(Q.chapter)}q${pad(Q.num)}`; while (qmap[id]) { Q.num++; id = `c${pad(Q.chapter)}q${pad(Q.num)}`; } }
+      if (!id) {
+        const nums = Object.values(qmap).filter(x => gradeOf(x) === Q.grade && x.chapter === Q.chapter).map(x => x.num || 0);
+        Q.num = Math.max(0, ...nums) + 1; id = `g${pad(Q.grade)}c${pad(Q.chapter)}q${pad(Q.num)}`;
+        while (qmap[id]) { Q.num++; id = `g${pad(Q.grade)}c${pad(Q.chapter)}q${pad(Q.num)}`; }
+      }
       const data = clean({
-        chapter: Q.chapter, num: Q.num || null, type: Q.type, marks: Q.marks, difficulty: Q.difficulty || '', stem: Q.stem,
+        grade: Q.grade, chapter: Q.chapter, num: Q.num || null, type: Q.type, marks: Q.marks, difficulty: Q.difficulty || '', stem: Q.stem,
         options: Q.type === 'MCQ' ? Q.options : null, answer: Q.type === 'MCQ' ? Q.answer : null,
         parts: Q.type === 'CASE' ? Q.parts : null, solution: Q.solution,
         finalAnswer: Q.type === 'MCQ' ? '' : Q.solution.filter(b => b.t === 'ans').map(b => b.x).join(' · '), updatedAt: now()
@@ -1869,47 +2210,88 @@ function aQEditor(q) {
   draw();
 }
 
+// ---------- CLASSES & CHAPTERS ----------
+async function aClasses() {
+  const pg = aShell('classes', 'Classes & chapters', spinner());
+  guard(pg, async () => {
+    const [qmap, tests, studs] = await Promise.all([aQ(), aTests(), aStudents()]);
+    let g = AC.g || 10;
+    const draw = () => {
+      const list = chaptersOf(g);
+      const qs = Object.values(qmap).filter(q => gradeOf(q) === g);
+      const used = [...new Set(qs.map(q => q.chapter))].sort((a, b) => a - b);
+      pg.innerHTML = `${gradeChips(g)}
+        <div class="kpis"><div class="kpi"><b>${studs.filter(s => studentGrade(s) === g).length}</b><span>Students</span></div><div class="kpi"><b>${qs.length}</b><span>Questions</span></div><div class="kpi"><b>${tests.filter(t => gradeOf(t) === g).length}</b><span>Tests</span></div></div>
+        <div class="card" style="margin-top:12px"><h3>Chapters of Class ${g}</h3>
+        <p class="small muted" style="margin:0 0 8px">One chapter per line. Line 1 is Chapter 1, line 2 is Chapter 2, and so on. You can rename chapters any time. Add new ones at the end; don't change the order of chapters that already have questions.</p>
+        <textarea class="input" id="chl" style="min-height:260px">${esc(list.join('\n'))}</textarea>
+        ${used.length ? `<p class="tiny muted">Chapters used by questions: ${used.join(', ')}</p>` : ''}
+        <div id="cherr"></div><button class="btn block" id="chs">Save chapters</button></div>`;
+      bindGradeChips(pg, v => { g = AC.g = v; draw(); });
+      $('#chs').onclick = () => busy($('#chs'), async () => {
+        const lines = $('#chl').value.split('\n').map(x => x.trim()).filter(Boolean);
+        const maxUsed = Math.max(0, ...used);
+        if (lines.length && lines.length < maxUsed && !(await confirmBox('Some chapters have no name', `Questions use chapters up to ${maxUsed}, but you listed ${lines.length}. Chapters without a name show as “Chapter N”. Save anyway?`, 'Save'))) return;
+        const chapters = { ...(S.grades || {}) }; chapters[String(g)] = lines;
+        await setDoc(D('config/grades'), { chapters, updatedAt: now() });
+        S.grades = chapters; toast(`Class ${g} chapters saved ✓`); draw();
+      });
+    };
+    draw();
+  });
+}
+
 // ---------- RESOURCES ----------
 async function aResources() {
   const pg = aShell('resources', 'Resources', spinner(), { action: `<button class="btn sm" id="newr" style="background:var(--accent);color:#1d2140">+ Add</button>` });
-  $('#newr').onclick = () => resForm(null);
+  let g = AC.g || 10;
+  $('#newr').onclick = () => resForm(null, g);
   guard(pg, async () => {
-    const list = await aRes(true);
-    pg.innerHTML = `<div class="info small">Upload the PDF to Google Drive → Share → General access: <b>Anyone with the link</b> → Copy link. Then tap “+ Add” and paste it.</div>${resourcesHtml(list, true)}`;
-    bindResourceAccordion(pg);
-    $$('[data-edit-res]', pg).forEach(b => b.onclick = e => { e.stopPropagation(); resForm(list.find(r => r.id === b.dataset.editRes)); });
+    const all = await aRes(true);
+    const draw = () => {
+      const list = all.filter(r => gradeOf(r) === g);
+      pg.innerHTML = `${gradeChips(g)}<div class="info small">Upload the PDF to Google Drive → Share → General access: <b>Anyone with the link</b> → Copy link. Then tap “+ Add” and paste it.</div>${resourcesHtml(list, true, g)}`;
+      bindGradeChips(pg, v => { g = AC.g = v; draw(); });
+      bindResourceAccordion(pg);
+      $$('[data-edit-res]', pg).forEach(b => b.onclick = e => { e.stopPropagation(); resForm(all.find(r => r.id === b.dataset.editRes), g); });
+    };
+    draw();
   });
 }
-async function resForm(r) {
+async function resForm(r, g0) {
   const list = await aRes();
   const types = [...new Set([...RES_TYPES, ...list.map(x => x.type)])];
-  r = r || { chapter: 1, type: 'Notes', title: '', link: '' };
+  r = r || { grade: g0 || 10, chapter: 1, type: 'Notes', title: '', link: '' };
+  let g = gradeOf(r);
   modal(`<h3>${r.id ? 'Edit resource' : 'Add resource'}</h3>
-    <label class="field"><span>Chapter</span><select class="input" id="rc">${CHAPTERS.slice(1).map((n, i) => `<option value="${i + 1}" ${Number(r.chapter) === i + 1 ? 'selected' : ''}>${i + 1}. ${esc(n)}</option>`).join('')}</select></label>
+    <div class="grid2"><label class="field"><span>Class</span><select class="input" id="rg">${gradeOptions(g)}</select></label>
+    <label class="field"><span>Chapter</span><select class="input" id="rc">${chapterOptions(g, r.chapter, [r.chapter])}</select></label></div>
     <label class="field"><span>Type (pick or type a new one)</span><input class="input" id="rt" list="rtl" value="${esc(r.type)}"><datalist id="rtl">${types.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
     <label class="field"><span>Button title</span><input class="input" id="rti" value="${esc(r.title)}" placeholder="e.g. Chapter notes (PDF)"></label>
     <label class="field"><span>Google Drive link</span><input class="input" id="rl" value="${esc(r.link)}" placeholder="https://drive.google.com/…"></label>
     <div id="rerr"></div><div class="row" style="justify-content:flex-end">${r.id ? '<button class="btn danger" id="rdel">Delete</button><span class="grow"></span>' : ''}<button class="btn sec" data-c>Cancel</button><button class="btn" id="rsave">Save</button></div>`, (m, close) => {
     m.querySelector('[data-c]').onclick = close;
+    $('#rg', m).onchange = e => { g = Number(e.target.value); $('#rc', m).innerHTML = chapterOptions(g, 1); };
     m.querySelector('#rsave').onclick = () => busy(m.querySelector('#rsave'), async () => {
-      const data = { chapter: Number($('#rc', m).value), type: $('#rt', m).value.trim() || 'Notes', title: $('#rti', m).value.trim(), link: $('#rl', m).value.trim(), updatedAt: now() };
+      const data = { grade: g, chapter: Number($('#rc', m).value), type: $('#rt', m).value.trim() || 'Notes', title: $('#rti', m).value.trim(), link: $('#rl', m).value.trim(), updatedAt: now() };
       if (!data.title) { $('#rerr', m).innerHTML = '<div class="err">Enter a title.</div>'; return; }
       if (!/^https:\/\//i.test(data.link)) { $('#rerr', m).innerHTML = '<div class="err">The link must start with https://</div>'; return; }
-      await setDoc(D('resources/' + (r.id || 'r_' + now().toString(36))), r.id ? { ...data, createdAt: r.createdAt || now() } : { ...data, createdAt: now() });
-      close(); toast('Saved'); aResources();
+      await setDoc(D('resources/' + (r.id || 'r_' + now().toString(36))), { ...data, createdAt: r.createdAt || now() });
+      AC.g = g; close(); toast('Saved'); aResources();
     });
     if (r.id) m.querySelector('#rdel').onclick = () => busy(null, async () => { await deleteDoc(D('resources/' + r.id)); close(); toast('Deleted'); aResources(); });
   });
 }
 
 // ---------- ANNOUNCEMENTS ----------
+const audLabel = a => a.audience === 'all' ? 'All students' : /^g\d+$/.test(a.audience || '') ? `Class ${a.audience.slice(1)}` : `${(a.targets || []).length} student${(a.targets || []).length === 1 ? '' : 's'}`;
 async function aAnnsView() {
   const pg = aShell('anns', 'Announcements', spinner(), { action: `<button class="btn sm" id="newa" style="background:var(--accent);color:#1d2140">+ New</button>` });
   $('#newa').onclick = () => annForm(null);
   guard(pg, async () => {
     const [anns, studs] = await Promise.all([aAnns(true), aStudents()]);
     pg.innerHTML = anns.length ? anns.map(a => `<div class="ann ${a.pinned ? 'pin' : ''}" data-a="${esc(a.id)}"><div class="at">${a.pinned ? '📌 ' : ''}<span class="grow">${esc(a.title)}</span>
-      <span class="chip ${a.audience === 'all' ? 'n' : 'p'}">${a.audience === 'all' ? 'All students' : `${(a.targets || []).length} student${(a.targets || []).length === 1 ? '' : 's'}`}</span></div>
+      <span class="chip ${a.audience === 'all' ? 'n' : 'p'}">${esc(audLabel(a))}</span></div>
       <div class="tiny muted">${fmtDate(a.createdAt)}</div><div class="ab">${esc(a.text)}</div></div>`).join('') : '<div class="card empty">No announcements yet.</div>';
     $$('[data-a]', pg).forEach(el => el.onclick = () => annForm(anns.find(a => a.id === el.dataset.a), studs));
   });
@@ -1917,22 +2299,33 @@ async function aAnnsView() {
 async function annForm(a, studs) {
   studs = studs || await aStudents();
   a = a || { title: '', text: '', pinned: false, audience: 'all', targets: [] };
+  const mode0 = a.audience === 'all' ? 'all' : /^g\d+$/.test(a.audience) ? 'class' : 'some';
   const sel = new Set(a.targets || []);
+  let listG = 'all';
   modal(`<h3>${a.id ? 'Edit announcement' : 'New announcement'}</h3>
     <label class="field"><span>Title</span><input class="input" id="at" value="${esc(a.title)}"></label>
     <label class="field"><span>Message</span><textarea class="input" id="ax">${esc(a.text)}</textarea></label>
     <label class="row" style="margin-bottom:10px;cursor:pointer"><input type="checkbox" id="ap" ${a.pinned ? 'checked' : ''}> 📌 Pin to the top (only one can be pinned)</label>
-    <div class="field"><span>Who sees it</span><select class="input" id="aa"><option value="all" ${a.audience === 'all' ? 'selected' : ''}>All students</option><option value="some" ${a.audience !== 'all' ? 'selected' : ''}>Only selected students</option></select></div>
-    <div id="asl" class="${a.audience === 'all' ? 'hidden' : ''}" style="max-height:30vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px 10px">${studs.map(s => `<label class="row" style="padding:5px 0;cursor:pointer"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id) ? 'checked' : ''}> ${esc(s.name)} <span class="tiny muted">${esc(s.id)}</span></label>`).join('') || '<div class="tiny muted">No students yet.</div>'}</div>
+    <div class="field"><span>Who sees it</span><select class="input" id="aa"><option value="all" ${mode0 === 'all' ? 'selected' : ''}>All students</option><option value="class" ${mode0 === 'class' ? 'selected' : ''}>One class</option><option value="some" ${mode0 === 'some' ? 'selected' : ''}>Only selected students</option></select></div>
+    <label class="field ${mode0 === 'class' ? '' : 'hidden'}" id="acls"><span>Class</span><select class="input" id="ag">${gradeOptions(mode0 === 'class' ? Number(a.audience.slice(1)) : (AC.g || 10))}</select></label>
+    <div id="asw" class="${mode0 === 'some' ? '' : 'hidden'}"><select class="input" id="alf" style="margin-bottom:6px"><option value="all">Show all classes</option>${GRADES.map(g => `<option value="${g}">Show Class ${g}</option>`).join('')}</select>
+    <div id="asl" style="max-height:30vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px 10px"></div></div>
     <div id="aerr"></div><div class="row" style="justify-content:flex-end;margin-top:12px">${a.id ? '<button class="btn danger" id="adel">Delete</button><span class="grow"></span>' : ''}<button class="btn sec" data-c>Cancel</button><button class="btn" id="asave">${a.id ? 'Save' : 'Post'}</button></div>`, (m, close) => {
+    const drawList = () => {
+      const list = studs.filter(s => listG === 'all' || studentGrade(s) === listG);
+      $('#asl', m).innerHTML = list.map(s => `<label class="row" style="padding:5px 0;cursor:pointer"><input type="checkbox" data-s="${esc(s.id)}" ${sel.has(s.id) ? 'checked' : ''}> ${esc(s.name)} <span class="tiny muted">Class ${studentGrade(s)} · ${esc(s.id)}</span></label>`).join('') || '<div class="tiny muted">No students.</div>';
+      $$('[data-s]', m).forEach(cb => cb.onchange = () => cb.checked ? sel.add(cb.dataset.s) : sel.delete(cb.dataset.s));
+    };
+    drawList();
     m.querySelector('[data-c]').onclick = close;
-    $('#aa', m).onchange = e => $('#asl', m).classList.toggle('hidden', e.target.value === 'all');
-    $$('[data-s]', m).forEach(cb => cb.onchange = () => cb.checked ? sel.add(cb.dataset.s) : sel.delete(cb.dataset.s));
+    $('#aa', m).onchange = e => { $('#acls', m).classList.toggle('hidden', e.target.value !== 'class'); $('#asw', m).classList.toggle('hidden', e.target.value !== 'some'); };
+    $('#alf', m).onchange = e => { listG = e.target.value === 'all' ? 'all' : Number(e.target.value); drawList(); };
     m.querySelector('#asave').onclick = () => busy(m.querySelector('#asave'), async () => {
-      const audience = $('#aa', m).value;
-      const data = clean({ title: $('#at', m).value.trim(), text: $('#ax', m).value.trim(), pinned: $('#ap', m).checked, audience, targets: audience === 'all' ? [] : [...sel], createdAt: a.createdAt || now(), updatedAt: now() });
+      const mode = $('#aa', m).value;
+      const audience = mode === 'all' ? 'all' : mode === 'class' ? 'g' + $('#ag', m).value : 'some';
+      const data = clean({ title: $('#at', m).value.trim(), text: $('#ax', m).value.trim(), pinned: $('#ap', m).checked, audience, targets: mode === 'some' ? [...sel] : [], createdAt: a.createdAt || now(), updatedAt: now() });
       if (!data.title) { $('#aerr', m).innerHTML = '<div class="err">Enter a title.</div>'; return; }
-      if (audience !== 'all' && !data.targets.length) { $('#aerr', m).innerHTML = '<div class="err">Select at least one student.</div>'; return; }
+      if (mode === 'some' && !data.targets.length) { $('#aerr', m).innerHTML = '<div class="err">Select at least one student.</div>'; return; }
       const id = a.id || 'a_' + now().toString(36);
       await saveAnnouncement(id, data, a);
       close(); toast(a.id ? 'Saved' : 'Posted'); aAnnsView();
@@ -1940,23 +2333,23 @@ async function annForm(a, studs) {
     if (a.id) m.querySelector('#adel').onclick = () => busy(null, async () => { await removeAnnouncement(a); close(); toast('Deleted'); aAnnsView(); });
   });
 }
-// targeted announcements are copied into each chosen student's private inbox, so other students can't read them
+// "selected students" announcements are copied into each chosen student's private inbox, so other students can't read them
 async function saveAnnouncement(id, data, old) {
   const all = await aAnns(true);
   const ops = [];
   if (data.pinned) all.filter(x => x.pinned && x.id !== id).forEach(x => {
     ops.push(['update', 'announcements/' + x.id, { pinned: false }]);
-    (x.audience === 'all' ? [] : x.targets || []).forEach(s => ops.push(['set', `students/${s}/inbox/${x.id}`, clean({ ...x, id: undefined, targets: [], pinned: false })]));
+    (x.audience === 'some' ? x.targets || [] : []).forEach(s => ops.push(['set', `students/${s}/inbox/${x.id}`, clean({ ...x, id: undefined, targets: [], pinned: false })]));
   });
   ops.push(['set', 'announcements/' + id, data]);
-  const oldT = old && old.audience !== 'all' ? old.targets || [] : [];
-  const newT = data.audience === 'all' ? [] : data.targets;
+  const oldT = old && old.audience === 'some' ? old.targets || [] : [];
+  const newT = data.audience === 'some' ? data.targets : [];
   oldT.filter(s => !newT.includes(s)).forEach(s => ops.push(['delete', `students/${s}/inbox/${id}`]));
   newT.forEach(s => ops.push(['set', `students/${s}/inbox/${id}`, { ...data, targets: [] }]));   // copy without other students' IDs
   await commitOps(ops); AC.anns = undefined;
 }
 async function removeAnnouncement(a) {
-  await commitOps([['delete', 'announcements/' + a.id], ...(a.audience === 'all' ? [] : a.targets || []).map(s => ['delete', `students/${s}/inbox/${a.id}`])]);
+  await commitOps([['delete', 'announcements/' + a.id], ...(a.audience === 'some' ? a.targets || [] : []).map(s => ['delete', `students/${s}/inbox/${a.id}`])]);
   AC.anns = undefined;
 }
 
@@ -1967,6 +2360,17 @@ const GLABEL = { badge: 'Badge text', footer: 'Footer', parts: 'Parts', tab: 'Ta
   start: 'Start time', end: 'End time', icon: 'Emoji', bullets: 'Bullet points', tone: 'Colour', color: 'Colour', head: 'Heading', columns: 'Columns (1–3)' };
 const COLORS = ['blue', 'orange', 'green', 'amber', 'pink', 'gray', 'purple'], TONES = ['white', 'gray', 'green', 'blue', 'orange', 'lavender', 'yellow'];
 const BLOCKNAME = { stats: 'Number cards', notes: 'Notes', bars: 'Bar chart', rangebars: 'Range bar chart', callout: 'Highlighted box', text: 'Small text', sections: 'Section cards', stackbar: 'Split bar', clock: 'Exam-day clock', cards: 'Bullet cards', phases: 'Week cards', columns: 'Column chart' };
+const BLOCK_TEMPLATES = {
+  callout: { type: 'callout', tone: 'blue', text: '' }, cards: { type: 'cards', columns: 2, items: [{ icon: '📌', title: '', tone: 'white', bullets: [''] }] },
+  stats: { type: 'stats', items: [{ big: '', small: '' }] }, notes: { type: 'notes', items: [{ tone: 'gray', title: '', text: '' }] },
+  bars: { type: 'bars', title: '', max: 20, items: [{ label: '', sub: '', value: 0 }], footnote: '' },
+  rangebars: { type: 'rangebars', title: '', max: 10, legendUsual: 'usual marks', legendUpto: 'can go up to', items: [{ label: '', low: 0, high: 0, text: '', tag: 'High' }], footnote: '' },
+  sections: { type: 'sections', items: [{ name: '', qs: '', formula: '', desc: '', time: '', color: 'blue' }] },
+  stackbar: { type: 'stackbar', title: '', items: [{ label: '', value: 0, caption: '', color: 'blue' }] },
+  clock: { type: 'clock', title: '', items: [{ label: '', start: '10:30', end: '11:00', color: 'blue' }] },
+  phases: { type: 'phases', items: [{ head: '', sub: '', text: '', color: 'blue' }] },
+  columns: { type: 'columns', title: '', max: 3, items: [{ label: '', value: 0 }], footnote: '' }, text: { type: 'text', text: '' } };
+const blankGuide = g => ({ badge: `CLASS ${g} MATHS`, footer: `Class ${g} Maths guide`, parts: [{ tab: '1. Guide', title: 'Exam guide', blocks: [{ type: 'callout', tone: 'blue', text: '**Tip:** write your first tip here.' }] }] });
 function getPath(o, p) { return p.reduce((a, k) => a[k], o); }
 function setPath(o, p, v) { const last = p[p.length - 1]; getPath(o, p.slice(0, -1))[last] = v; }
 function blankLike(x) { if (Array.isArray(x)) return x.length && typeof x[0] === 'string' ? [''] : []; if (x && typeof x === 'object') { const r = {}; for (const [k, v] of Object.entries(x)) r[k] = k === 'type' || k === 'color' || k === 'tone' ? v : blankLike(v); return r; } return typeof x === 'number' ? 0 : ''; }
@@ -1988,24 +2392,44 @@ function jf(v, path, key) {
 async function aGuideEditor() {
   const pg = aShell('guide', 'Exam Guide', spinner(), { wide: true });
   guard(pg, async () => {
-    const G = JSON.parse(JSON.stringify(await getGuide()));
-    let part = 0, mode = 'edit';
+    let g = AC.g || 10, G = null, part = 0, mode = 'edit';
+    const load = async () => { const d = await getGuide(g); G = d ? JSON.parse(JSON.stringify(d)) : null; part = 0; };
+    await load();
     const draw = () => {
-      pg.innerHTML = `<div class="info small">Change any text or number, then tap <b>Save</b>. Use <b>**double stars**</b> around words to make them bold. Students see changes the next time they open the app.</div>
-        <div class="gtabs">${G.parts.map((p, j) => `<button class="${j === part ? 'on' : ''}" data-g="${j}">${esc(p.tab || p.title)}</button>`).join('')}</div>
+      if (!G) {
+        pg.innerHTML = `${gradeChips(g)}<div class="card"><h3>No exam guide for Class ${g} yet</h3><p class="small muted">Students in Class ${g} see “Your teacher hasn't added an exam guide yet” until you save one.</p>
+          <div class="row wrap"><button class="btn" id="gfrom10">Start from the Class 10 guide</button><button class="btn sec" id="gblank">Start with a blank guide</button></div></div>`;
+        bindGradeChips(pg, async v => { g = AC.g = v; await load(); draw(); });
+        $('#gfrom10').onclick = async () => { const d = await getGuide(10); G = JSON.parse(JSON.stringify(d || GUIDE_DEFAULT)); G.badge = G.badge.replace(/CLASS 10/i, `CLASS ${g}`); G.footer = G.footer.replace(/Class 10/i, `Class ${g}`); draw(); toast('Copied. Edit it, then tap Save.'); };
+        $('#gblank').onclick = () => { G = blankGuide(g); draw(); };
+        return;
+      }
+      part = Math.min(part, G.parts.length - 1);
+      const P = G.parts[part];
+      pg.innerHTML = `${gradeChips(g)}<div class="info small">Class ${g} guide. Change any text or number, then tap <b>Save</b>. Use <b>**double stars**</b> around words to make them bold.</div>
+        <div class="gtabs">${G.parts.map((p, j) => `<button class="${j === part ? 'on' : ''}" data-g="${j}">${esc(p.tab || p.title)}</button>`).join('')}<button data-addpart="1">+ Section</button></div>
         <div class="row wrap" style="margin-bottom:10px"><button class="toggle ${mode === 'edit' ? 'on' : ''}" data-md="edit">Edit</button><button class="toggle ${mode === 'view' ? 'on' : ''}" data-md="view">Preview</button>
-        <span class="grow"></span><button class="btn ghost sm" id="greset">Reset to original</button><button class="btn sm" id="gsave">Save</button></div>
+        <span class="grow"></span>${g === 10 ? '<button class="btn ghost sm" id="greset">Reset to original</button>' : '<button class="btn ghost sm" id="gdel">Delete this guide</button>'}<button class="btn sm" id="gsave">Save</button></div>
         ${mode === 'view' ? renderGuidePart(G, part) : `<div class="card jf">${jf(G.badge, ['badge'], 'badge')}${jf(G.footer, ['footer'], 'footer')}</div>
-        <div class="card jf">${jf(G.parts[part].tab, ['parts', part, 'tab'], 'tab')}${jf(G.parts[part].title, ['parts', part, 'title'], 'title')}
-        ${G.parts[part].blocks.map((b, bi) => `<fieldset><legend>Block ${bi + 1}</legend>${jf(b, ['parts', part, 'blocks', bi], '')}</fieldset>`).join('')}</div>`}`;
+        <div class="card jf"><div class="row"><div class="grow">${jf(P.tab, ['parts', part, 'tab'], 'tab')}</div>${G.parts.length > 1 ? '<button class="btn danger sm" id="rmpart">Remove section</button>' : ''}</div>${jf(P.title, ['parts', part, 'title'], 'title')}
+        ${P.blocks.map((b, bi) => `<fieldset><legend>Block ${bi + 1}</legend>${jf(b, ['parts', part, 'blocks', bi], '')}
+          <div class="row" style="justify-content:flex-end"><button class="btn ghost sm" data-bup="${bi}">Move up</button><button class="btn ghost sm" data-bdel="${bi}">Remove block</button></div></fieldset>`).join('')}
+        <div class="row wrap" style="margin-top:10px"><select class="input" id="btype" style="max-width:240px">${Object.keys(BLOCK_TEMPLATES).map(k => `<option value="${k}">${esc(BLOCKNAME[k])}</option>`).join('')}</select><button class="btn sec sm" id="badd">+ Add block</button></div></div>`}`;
+      bindGradeChips(pg, async v => { g = AC.g = v; await load(); draw(); });
       $$('[data-g]', pg).forEach(b => b.onclick = () => { part = Number(b.dataset.g); draw(); });
+      $$('[data-addpart]', pg).forEach(b => b.onclick = () => { G.parts.push({ tab: `${G.parts.length + 1}. New`, title: 'New section', blocks: [JSON.parse(JSON.stringify(BLOCK_TEMPLATES.callout))] }); part = G.parts.length - 1; mode = 'edit'; draw(); });
       $$('[data-md]', pg).forEach(b => b.onclick = () => { mode = b.dataset.md; draw(); });
       $$('[data-p]', pg).forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => setPath(G, JSON.parse(i.dataset.p), i.dataset.num ? Number(i.value) : i.value)));
       $$('[data-del]', pg).forEach(b => b.onclick = () => { const p = JSON.parse(b.dataset.del); getPath(G, p.slice(0, -1)).splice(p[p.length - 1], 1); draw(); });
       $$('[data-up]', pg).forEach(b => b.onclick = () => { const p = JSON.parse(b.dataset.up); const arr = getPath(G, p.slice(0, -1)), i = p[p.length - 1]; if (i > 0) [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; draw(); });
       $$('[data-add]', pg).forEach(b => b.onclick = () => { const arr = getPath(G, JSON.parse(b.dataset.add)); arr.push(blankLike(arr[arr.length - 1])); draw(); });
-      $('#gsave').onclick = () => busy($('#gsave'), async () => { await setDoc(D('content/examGuide'), { json: JSON.stringify(G), updatedAt: now() }); toast('Exam Guide saved ✓'); });
-      $('#greset').onclick = async () => { if (await confirmBox('Reset to original?', 'This replaces your edits with the content from your 4 infographics. Tap Save afterwards to keep it.', 'Reset')) { Object.assign(G, JSON.parse(JSON.stringify(GUIDE_DEFAULT))); draw(); } };
+      $$('[data-bdel]', pg).forEach(b => b.onclick = () => { P.blocks.splice(Number(b.dataset.bdel), 1); draw(); });
+      $$('[data-bup]', pg).forEach(b => b.onclick = () => { const i = Number(b.dataset.bup); if (i > 0) [P.blocks[i - 1], P.blocks[i]] = [P.blocks[i], P.blocks[i - 1]]; draw(); });
+      if ($('#badd')) $('#badd').onclick = () => { P.blocks.push(JSON.parse(JSON.stringify(BLOCK_TEMPLATES[$('#btype').value]))); draw(); };
+      if ($('#rmpart')) $('#rmpart').onclick = async () => { if (await confirmBox('Remove this section?', `“${esc(P.tab || P.title)}” and its blocks will be removed when you tap Save.`, 'Remove', true)) { G.parts.splice(part, 1); part = 0; draw(); } };
+      $('#gsave').onclick = () => busy($('#gsave'), async () => { await setDoc(D('content/guide_g' + g), { json: JSON.stringify(G), updatedAt: now() }); toast(`Class ${g} guide saved ✓`); });
+      if ($('#greset')) $('#greset').onclick = async () => { if (await confirmBox('Reset to original?', 'This replaces your edits with the content from your 4 infographics. Tap Save afterwards to keep it.', 'Reset')) { G = JSON.parse(JSON.stringify(GUIDE_DEFAULT)); part = 0; draw(); } };
+      if ($('#gdel')) $('#gdel').onclick = async () => { if (await confirmBox(`Delete the Class ${g} guide?`, 'Students in this class will see an empty Exam Guide tab.', 'Delete', true)) { await busy(null, async () => { await deleteDoc(D('content/guide_g' + g)); G = null; toast('Deleted'); draw(); }); } };
     };
     draw();
   });
@@ -2017,14 +2441,15 @@ async function aSettings() {
   pg.innerHTML = `<div class="card"><h3>WhatsApp number</h3><p class="small muted">Students see a “Send on WhatsApp” button after a test with written questions. Use country code + number, e.g. 919876543210.</p>
       <div class="row"><input class="input grow" id="wa" inputmode="tel" value="${esc(S.settings.whatsapp || '')}" placeholder="91XXXXXXXXXX"><button class="btn" id="wasave">Save</button></div></div>
     <div class="card"><h3>Exports (open in Excel)</h3><p class="small muted">Backups are not available on the free Firebase plan, so download these regularly.</p>
-      <div class="row wrap"><button class="btn" id="ex1">⬇ Results (CSV)</button><button class="btn sec" id="ex2">⬇ Chapter-wise (CSV)</button><button class="btn sec" id="ex3">⬇ Full backup (JSON)</button></div></div>
+      <div class="row wrap"><button class="btn" id="ex1">⬇ All results (CSV)</button><button class="btn sec" id="ex2">⬇ Class ${AC.g || 10} chapter-wise (CSV)</button><button class="btn sec" id="ex4">⬇ Student list (CSV)</button><button class="btn sec" id="ex3">⬇ Full backup (JSON)</button></div></div>
     <div class="card"><h3>Your admin login</h3><p class="small">Admin ID: <b>${esc(S.adminDoc.loginId || '')}</b></p><button class="btn sec" id="cpw">Change password</button></div>
     <button class="btn danger block" id="so">${ICON.out} Sign out</button>`;
   $('#wasave').onclick = () => busy($('#wasave'), async () => { const v = $('#wa').value.replace(/\D/g, ''); await setDoc(D('config/settings'), { ...S.settings, whatsapp: v, updatedAt: now() }); S.settings.whatsapp = v; toast('Saved'); });
   $('#ex1').onclick = () => busy($('#ex1'), async () => { const [atts, keys, studs] = await Promise.all([aAtts(true), aKeys(), aStudents()]); exportResults(atts, keys, studs); });
-  $('#ex2').onclick = () => busy($('#ex2'), async () => { const [atts, keys, studs] = await Promise.all([aAtts(true), aKeys(), aStudents()]); exportChapterwise(officialAttempts(atts), keys, studs); });
+  $('#ex2').onclick = () => busy($('#ex2'), async () => { const [atts, keys, studs] = await Promise.all([aAtts(true), aKeys(), aStudents()]); exportChapterwise(officialAttempts(atts), keys, studs, AC.g || 10); });
+  $('#ex4').onclick = () => busy($('#ex4'), async () => exportStudents(await aStudents(true)));
   $('#ex3').onclick = () => busy($('#ex3'), async () => {
-    const names = ['questions', 'tests', 'testKeys', 'students', 'attempts', 'resources', 'announcements', 'images', 'content', 'config'];
+    const names = ['questions', 'tests', 'testKeys', 'testSolutions', 'students', 'attempts', 'resources', 'announcements', 'images', 'content', 'config'];
     const out = { app: APP_NAME, exportedAt: new Date().toISOString() };
     for (const n of names) out[n] = await listC(n);
     download(`maths-by-ssk-backup-${stamp()}.json`, JSON.stringify(out), 'application/json'); toast('Backup downloaded');

@@ -323,6 +323,30 @@ h4.bh{margin:12px 0 4px;color:var(--brand2);font-size:.95rem}
 .btn.wrapbtn svg{flex:none}
 .fcard .dtable{font-size:.92rem}
 .fcard .dtable td{padding:6px 5px}
+/* v4: reminders, practice mocks, chapter videos */
+.remind{border-color:#f3d9a0;background:var(--syellow)}
+.ricon{width:40px;height:40px;border-radius:12px;background:#fff3cf;color:#a86b00;display:grid;place-items:center;flex:none}
+.ricon svg{width:22px;height:22px}
+.ricon.sm{width:34px;height:34px;border-radius:10px;background:var(--sblue);color:var(--brand2)}
+.ricon.sm svg{width:18px;height:18px}
+.pcard{cursor:pointer;border-color:#c9cdf6;background:linear-gradient(135deg,#eef2fd,#f4f0ff)}
+.pcard .ricon{background:#e3e7ff;color:var(--brand2)}
+.pchk input{width:20px;height:20px;flex:none;accent-color:var(--brand2)}
+.vbtn{display:inline-flex;align-items:center;gap:4px;border:0;border-radius:999px;background:#ffe5e5;color:#c4302b;font-weight:700;font-size:.75rem;padding:6px 10px 6px 8px;cursor:pointer;flex:none}
+.vbtn svg{width:14px;height:14px}
+.vbox{position:relative;width:100%;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#111}
+.vbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vcard{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:10px;border:1px solid #edf0f6}
+.vrow{padding:12px 4px;border-bottom:1px solid var(--line)}
+.vrow:last-child{border-bottom:0}
+.vitem{display:flex;align-items:center;gap:10px;margin-top:8px;padding:6px;border-radius:12px;background:#f7f8fc;cursor:pointer;min-width:0}
+.vitem img,.vitem .vth{width:96px;height:54px;border-radius:8px;object-fit:cover;flex:none;background:#ffe5e5;display:grid;place-items:center;color:#c4302b}
+.vitem .vth svg{width:22px;height:22px}
+.vitem .clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52vw}
+.seg{overflow-x:auto}
+.seg button{white-space:nowrap}
+.switch{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+@media (max-width:420px){.qtext .dtable td{padding:5px 6px}}
 
 </style>
 </head>
@@ -365,6 +389,7 @@ const firebaseConfig = {
   appId: '1:222443446554:web:b87e614efedcd8d3774ca3'
 };
 const APP_NAME = 'Maths by SSK';
+const APP_VERSION = '4';          // shown on the sign-in page, so it's easy to check the new version is live
 const LOGIN_DOMAIN = 'maths-by-ssk.app';
 const GRADES = [6, 7, 8, 9, 10, 11, 12];
 const CH10 = ['Real Numbers', 'Polynomials', 'Pair of Linear Equations in Two Variables', 'Quadratic Equations',
@@ -492,6 +517,9 @@ const ICON = {
   rev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6c-2-1.5-5-2-8-1.5V19c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5C17 4 14 4.5 12 6z"/><path d="M12 6v14.5"/></svg>',
   star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
   send: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.4-7.5a1 1 0 0 0 0-1.8L3.4 3.6a.9.9 0 0 0-1.3 1L4 11l9 1-9 1-1.9 6.4a.9.9 0 0 0 1.3 1z"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.2-6.5a1 1 0 0 0 0-1.7L9.5 4.6A1 1 0 0 0 8 5.5z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M5 3 2 6M19 3l3 3"/></svg>',
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>',
   wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.4 5 5.1-1.3A10 10 0 1 0 12 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2s-1 .3-3.4-.7-3.9-3.4-4-3.6-1-1.3-1-2.5.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>'
 };
 
@@ -705,7 +733,7 @@ async function showLogin(errText = '') {
   $('#app').innerHTML = `<div class="loginwrap">${spinner()}</div>`;
   let adminExists = true;
   try { adminExists = !!(await getD('config/admin')); } catch (e) { console.warn(e); }
-  const brand = `<div class="brandmark"><div class="logo">∑</div><div><h2 style="margin:0">${APP_NAME}</h2><div class="muted small">Maths practice · Classes 6–12</div></div></div>`;
+  const brand = `<div class="brandmark"><div class="logo">∑</div><div><h2 style="margin:0">${APP_NAME}</h2><div class="muted small">Maths practice · Classes 6–12</div><div class="tiny muted" id="appver">Version ${APP_VERSION}</div></div></div>`;
   if (!adminExists) {
     $('#app').innerHTML = `<div class="loginwrap"><div class="logincard">${brand}
       <div class="info"><b>First-time setup.</b> Create the admin login. Only do this once.</div>
@@ -805,6 +833,46 @@ function scoreAttempt(att, key) {
   return r;
 }
 function optionOrder(sid, tid, qid, n) { return shuffled([...Array(n).keys()], hashStr(`${sid}|${tid}|${qid}`)); }
+// options of Assertion–Reason questions (and ones whose solution names options by letter) keep their order
+function optOrder(it, sid, tid) { const n = (it && it.options || []).length; return it && it.fixed ? [...Array(n).keys()] : optionOrder(sid, tid, it.qid, n); }
+const FIXED_HINT = /assertion\s*\(a\)|reason\s*\(r\)|both\s*\(?[a-d]\)?\s*and\s*\(?[a-d]\)?|none of (these|the above)|all of (these|the above)|neither\s*\(?[a-d]\)?\s*nor/i;
+function looksFixed(q) { return [blocksToText(q.stem || []), ...(q.options || [])].some(t => FIXED_HINT.test(String(t || ''))); }
+
+// ---------- YouTube links -> video id (watch?v=, youtu.be/, shorts/, live/, embed/), or a playlist ----------
+function ytParse(url) {
+  let u; try { u = new URL(String(url || '').trim()); } catch { return null; }
+  const host = u.hostname.replace(/^(www\.|m\.|music\.)/, '');
+  if (!['youtube.com', 'youtu.be', 'youtube-nocookie.com'].includes(host)) return null;
+  const okId = s => /^[A-Za-z0-9_-]{11}$/.test(s || '') ? s : null;
+  let id = null;
+  if (host === 'youtu.be') id = okId(u.pathname.split('/')[1]);
+  else if (u.searchParams.get('v')) id = okId(u.searchParams.get('v'));
+  else { const m = u.pathname.match(/^\/(shorts|live|embed|v)\/([^/?#]+)/); if (m) id = okId(m[2]); }
+  const t = u.searchParams.get('t') || u.searchParams.get('start') || '';
+  const tm = String(t).match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+  const start = tm ? (Number(tm[1] || 0) * 3600 + Number(tm[2] || 0) * 60 + Number(tm[3] || 0)) : 0;
+  const list = u.searchParams.get('list');
+  if (id) return { id, start };
+  if (list && /^[A-Za-z0-9_-]{10,64}$/.test(list)) return { list };
+  return null;
+}
+function ytEmbedUrl(p) {
+  if (!p) return '';
+  if (p.list && !p.id) return `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(p.list)}`;
+  return `https://www.youtube-nocookie.com/embed/${p.id}?rel=0&modestbranding=1${p.start ? '&start=' + p.start : ''}`;
+}
+const isVideoRes = r => String(r.type || '').toLowerCase() === 'video' || !!ytParse(r.link);
+function videoPlayerHtml(v) {
+  const p = ytParse(v.link);
+  if (!p) return `<a class="btn sec block" target="_blank" rel="noopener" href="${esc(v.link)}">${ICON.play} ${esc(v.title || 'Watch the video')}</a>`;
+  return `<div class="vcard"><div class="vbox"><iframe src="${esc(ytEmbedUrl(p))}" title="${esc(v.title || 'Chapter video')}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+    <div class="row" style="margin-top:8px"><b class="grow">${esc(v.title || 'Chapter video')}</b><a class="btn ghost sm" target="_blank" rel="noopener" href="${esc(v.link)}">Open in YouTube ↗</a></div></div>`;
+}
+
+// ---------- student profile: details a student fills in themselves ----------
+const PROFILE_NEEDED = [['dob', 'date of birth'], ['school', 'school'], ['mobile', 'mobile number'], ['address', 'address']];
+function andList(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+function missingProfile(s) { return PROFILE_NEEDED.filter(([k]) => !String((s && s[k]) || '').trim()).map(([, l]) => l); }
 function remapOptionLetters(text, order) {    // "Option (c)" in solution text -> the letter this student saw
   return String(text).replace(/([Oo]ption )\(([a-d])\)/g, (m, w, L) => { const orig = 'abcd'.indexOf(L); const pos = order.indexOf(orig); return pos >= 0 ? `${w}(${'abcd'[pos]})` : m; });
 }
@@ -1396,6 +1464,46 @@ function studentStart() {
 }
 const sRev = f => sLoad('rev', () => loadRevision(myGrade()), f);
 const sRes = f => sLoad('res', async () => (await listC('resources')).filter(r => gradeOf(r) === myGrade()), f);
+const sFiles = res => res.filter(r => !isVideoRes(r));
+const sVideos = res => res.filter(isVideoRes).sort((a, b) => (a.order || 0) - (b.order || 0) || (a.createdAt || 0) - (b.createdAt || 0));
+const sReminders = f => sLoad('rems', async () => { try { return await listC(`students/${S.sid}/reminders`); } catch (e) { console.warn('reminders', e && e.code); return []; } }, f);
+const sPractice = f => sLoad('practice', async () => { try { return (await listC('practice', where('sid', '==', S.sid))).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)); } catch (e) { console.warn('practice', e && e.code); return []; } }, f);
+const sPool = f => sLoad('pool', async () => (await listC('pool', where('grade', '==', myGrade()))).sort((a, b) => a.chapter - b.chapter), f);
+const poolId = (g, c) => `g${pad(g)}c${pad(c)}`;
+const practiceOn = () => S.settings && S.settings.practiceOn === true;
+// reminders still to do: a test not yet taken, or a profile not saved since the reminder
+function activeReminders(rems, tests, atts) {
+  const out = {};
+  for (const r of rems) {
+    if (r.kind === 'test') {
+      const t = tests.find(x => x.id === r.tid);
+      if (!t || atts.some(a => a.tid === r.tid)) continue;
+      const k = 't_' + r.tid; if (!out[k] || (out[k].createdAt || 0) < (r.createdAt || 0)) out[k] = { ...r, test: t };
+    } else if (r.kind === 'profile') {
+      if ((S.profile.selfUpdatedAt || 0) >= (r.createdAt || 0)) continue;
+      if (!out.p || (out.p.createdAt || 0) < (r.createdAt || 0)) out.p = r;
+    }
+  }
+  return Object.values(out).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+function dueHtml(due) {
+  if (!due) return '';
+  const d = new Date(due + 'T23:59:59'); if (isNaN(d)) return '';
+  const late = d.getTime() < now();
+  return `<span class="chip ${late ? 'r' : 'a'}">${late ? 'Was due' : 'Finish by'} ${esc(fmtDob(due))}</span>`;
+}
+function reminderHtml(r) {
+  if (r.kind === 'test') return `<div class="card remind" data-rem-test="${esc(r.tid)}"><div class="row"><div class="ricon">${ICON.clock}</div><div class="grow">
+      <div class="tiny muted">Reminder from your teacher · ${fmtDay(r.createdAt)}</div><b>Take the test: ${esc(r.test.title)}</b>
+      ${r.note ? `<div class="small" style="margin-top:2px">${esc(r.note)}</div>` : ''}<div class="chips" style="margin-top:6px">${dueHtml(r.due)}<span class="chip n">${r.test.count} questions${r.test.timer ? ` · ${r.test.timer} min` : ''}</span></div></div></div>
+      <button class="btn block" style="margin-top:10px" data-go-test="${esc(r.tid)}">Start the test</button></div>`;
+  const miss = missingProfile(S.profile);
+  return `<div class="card remind"><div class="row"><div class="ricon">${ICON.user}</div><div class="grow">
+      <div class="tiny muted">Reminder from your teacher · ${fmtDay(r.createdAt)}</div><b>Please update your profile</b>
+      ${r.note ? `<div class="small" style="margin-top:2px">${esc(r.note)}</div>` : ''}
+      <div class="small muted" style="margin-top:2px">${miss.length ? `Still missing: ${esc(andList(miss))}.` : 'Check your details are correct, then tap Save.'}</div></div></div>
+      <button class="btn block" style="margin-top:10px" data-go-profile="1">Update my profile</button></div>`;
+}
 const sConf = f => sLoad('conf', async () => { try { return ((await getD('confidence/' + S.sid)) || {}).ratings || {}; } catch { return {}; } }, f);
 function chatUnread() { const t = S.thread; return !!t && (t.aAt || 0) > (t.sRead || 0); }
 function markChatDot() {
@@ -1440,8 +1548,9 @@ async function sHome() {
   const p = S.profile;
   const pg = sShell('home', APP_NAME, spinner());
   try {
-    const [anns, seen, tests, atts, conf] = await Promise.all([sAnnouncements(), sSeen(), sTests(), sAttempts(), sConf()]);
+    const [anns, seen, tests, atts, conf, rems] = await Promise.all([sAnnouncements(), sSeen(), sTests(), sAttempts(), sConf(), sReminders(true)]);
     const g = myGrade(); const nCh = chaptersOf(g).length;
+    const todo = activeReminders(rems, tests, atts);
     const rated = Object.entries(conf).filter(([k]) => k.startsWith(g + '_')).map(([, v]) => v.s);
     const avg = rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : 0;
     const doneTids = new Set(atts.map(a => a.tid));
@@ -1450,8 +1559,9 @@ async function sHome() {
         <div style="font-size:.85rem;opacity:.85">Welcome back</div><h2 style="color:#fff;margin:0">${esc(p.name || S.sid)}</h2>
         <div style="font-size:.85rem;opacity:.85">Class ${myGrade()}${p.school ? ' · ' + esc(p.school) : ''}</div></div></div>
       <div id="homechat" class="card row ${chatUnread() ? '' : 'hidden'}" style="cursor:pointer;border-color:#c9cdf6;background:var(--sblue)"><div style="font-size:1.5rem">💬</div><div class="grow"><b>New message from your teacher</b><div class="small muted">Tap to open Chat</div></div><span class="muted">›</span></div>
-      ${prog.length ? `<div class="sectiontitle">Continue</div>${prog.map(v => `<div class="card row" style="cursor:pointer" data-resume="${esc(v.tid)}">
-        <div class="grow"><b>${esc(v.title || v.tid)}</b><div class="small muted">In progress · saved on this phone</div></div><span class="btn sm">Resume</span></div>`).join('')}` : ''}
+      ${todo.length ? `<div class="sectiontitle">⏰ Reminders</div><div id="rems">${todo.map(reminderHtml).join('')}</div>` : ''}
+      ${prog.length ? `<div class="sectiontitle">Continue</div>${prog.map(v => `<div class="card row" style="cursor:pointer" data-resume="${esc(v.tid)}" data-n="${esc(v.n || 1)}">
+        <div class="grow"><b>${esc(v.title || v.tid)}</b><div class="small muted">${v.practice ? 'Practice mock · ' : ''}In progress · saved on this phone</div></div><span class="btn sm">Resume</span></div>`).join('')}` : ''}
       <div class="sectiontitle">Announcements</div>
       <div id="anns">${anns.length ? anns.map(a => annHtml(a, !seen.includes(a.id))).join('') : '<div class="card empty">No announcements yet.</div>'}</div>
       <div class="sectiontitle">Your progress</div>
@@ -1462,7 +1572,9 @@ async function sHome() {
       <button class="kpi" data-go="chat"><b>💬</b><span>Ask your teacher</span></button></div>`;
     $('#homechat').onclick = () => sNav('chat');
     $$('[data-go]', pg).forEach(b => b.onclick = () => sNav(b.dataset.go));
-    $$('[data-resume]', pg).forEach(b => b.onclick = () => openTestIntro(b.dataset.resume));
+    $$('[data-resume]', pg).forEach(b => b.onclick = () => resumeSaved(b.dataset.resume, Number(b.dataset.n) || 1));
+    $$('[data-go-test]', pg).forEach(b => b.onclick = () => openTestIntro(b.dataset.goTest));
+    $$('[data-go-profile]', pg).forEach(b => b.onclick = () => sProfileEdit(() => sHome()));
     $$('.ann', pg).forEach(el => el.onclick = async () => {
       const body = $('.ab', el); body.classList.toggle('hidden');
       const nd = $('.newdot', el);
@@ -1493,19 +1605,27 @@ function testStatus(t, atts) {
 async function sTestsView(force) {
   const pg = sShell('tests', 'Tests', spinner(), { sub: `Class ${myGrade()}` });
   try {
-    const [tests, atts] = await Promise.all([sTests(force), sAttempts(force)]);
+    if (force) { try { S.settings = (await getD('config/settings')) || {}; } catch { } }
+    const [tests, atts, rems, prac] = await Promise.all([sTests(force), sAttempts(force), sReminders(force), practiceOn() ? sPractice(force) : []]);
+    const reminded = new Set(activeReminders(rems, tests, atts).filter(r => r.kind === 'test').map(r => r.tid));
     const groups = [['chapter', 'Chapter tests'], ['mock', 'Mock tests'], ['custom', 'More tests']];
-    pg.innerHTML = groups.map(([k, label]) => {
+    const practiceCard = practiceOn() ? `<div class="card pcard" id="mkmock"><div class="row"><div class="ricon">${ICON.target}</div><div class="grow"><b>Make your own practice mock</b>
+        <div class="small muted">One chapter or mixed chapters. See your score and the detailed solutions as soon as you submit.</div></div><span class="btn sm">Start</span></div></div>` : '';
+    pg.innerHTML = practiceCard + (groups.map(([k, label]) => {
       const list = tests.filter(t => (t.kind || 'custom') === k);
       if (!list.length) return '';
       return `<div class="sectiontitle">${label}</div><div class="card" style="padding:4px 14px">${list.map(t => `
         <div class="li" data-t="${esc(t.id)}"><div class="grow"><div class="t">${esc(t.title)}</div>
         <div class="small muted">${t.count} questions · ${t.totalMarks} marks${t.timer ? ` · ${t.timer} min` : ''}</div>
-        <div class="chips" style="margin-top:4px">${testStatus(t, atts)}</div></div><span class="muted">›</span></div>`).join('')}</div>`;
-    }).join('') || `<div class="card empty">No tests for Class ${myGrade()} yet. Your teacher will add them soon.</div>`;
+        <div class="chips" style="margin-top:4px">${reminded.has(t.id) ? '<span class="chip r">⏰ Teacher reminder</span>' : ''}${testStatus(t, atts)}</div></div><span class="muted">›</span></div>`).join('')}</div>`;
+    }).join('') || `<div class="card empty">No tests for Class ${myGrade()} yet. Your teacher will add them soon.</div>`)
+      + (prac.length ? `<div class="sectiontitle">My practice mocks</div><div class="card" style="padding:4px 14px">${prac.slice(0, 30).map(p => `<div class="li" data-pm="${esc(p.id)}"><div class="grow"><div class="t">${esc(p.title)}</div>
+          <div class="small muted">${fmtDate(p.submittedAt)} · ${(p.qids || []).length} questions</div></div><div class="right"><b>${p.score == null ? '–' : fmtNum(p.score) + '/' + p.max}</b>${p.max ? `<div class="tiny muted">${pct(p.score || 0, p.max)}%</div>` : ''}</div></div>`).join('')}</div>` : '');
     pg.insertAdjacentHTML('beforeend', '<div class="center" style="margin-top:14px"><button class="btn ghost sm" id="rf">Refresh</button></div>');
     $('#rf').onclick = () => sTestsView(true);
+    if ($('#mkmock')) $('#mkmock').onclick = () => sPracticeBuilder();
     $$('[data-t]', pg).forEach(el => el.onclick = () => openTestIntro(el.dataset.t));
+    $$('[data-pm]', pg).forEach(el => el.onclick = () => showPracticeResult(prac.find(p => p.id === el.dataset.pm)));
   } catch (e) { pg.innerHTML = `<div class="card">${esc(errMsg(e))}</div>`; }
 }
 
@@ -1520,7 +1640,8 @@ async function openTestIntro(tid) {
   const written = (t.items || []).filter(i => i.type !== 'MCQ').length;
   const tc = {}; (t.items || []).forEach(i => tc[i.type] = (tc[i.type] || 0) + 1);
   $('.topbar h1').textContent = t.title;
-  pg.innerHTML = `<div class="card"><h2>${esc(t.title)}</h2>
+  const rem = activeReminders(SC.rems || [], [t], mine).find(r => r.kind === 'test');
+  pg.innerHTML = `${rem ? `<div class="info small">⏰ Your teacher reminded you to take this test${rem.due ? ` by <b>${esc(fmtDob(rem.due))}</b>` : ''}.${rem.note ? ' ' + esc(rem.note) : ''}</div>` : ''}<div class="card"><h2>${esc(t.title)}</h2>
     <div class="chips"><span class="chip">${t.count} questions</span><span class="chip">${t.totalMarks} marks</span><span class="chip">${t.timer ? `⏱ ${t.timer} min` : 'No time limit'}</span></div>
     <p class="small muted" style="margin:10px 0 0">${TYPES.filter(k => tc[k]).map(k => `${TYPE_NAME[k]}: ${tc[k]}`).join(' · ')}</p></div>
     ${t.kind === 'chapter' && t.chapter ? `<button class="btn sec block wrapbtn" id="revch">${ICON.rev} Revise Chapter ${esc(t.chapter)} formulas first</button><div class="sp"></div>` : ''}
@@ -1543,11 +1664,14 @@ async function openTestIntro(tid) {
 
 // ---------- TEST RUNNER ----------
 let runTimer = null;
-function runTest(t, n) {
+// mode.practice: a student's own practice mock (saved in practice/, scored at once, solutions shown straight away)
+function runTest(t, n, mode = {}) {
+  const practice = !!mode.practice;
   const key = progKey(t.id, n);
   let st = lsGet(key);
   if (!st) {
     st = { tid: t.id, title: t.title, n, startedAt: now(), deadline: t.timer ? now() + t.timer * 60000 : null, responses: {}, review: [], visited: [], cur: 0 };
+    if (practice) { st.practice = true; st.mock = { title: t.title, timer: t.timer || 0, chapters: mode.chapters || [], items: t.items }; }
     lsSet(key, st);
   }
   const items = t.items || [];
@@ -1570,7 +1694,7 @@ function runTest(t, n) {
     const i = st.cur, it = items[i];
     if (!st.visited.includes(it.qid)) { st.visited.push(it.qid); save(); }
     const r = st.responses[it.qid] || {};
-    const order = it.type === 'MCQ' ? optionOrder(S.sid, t.id, it.qid, (it.options || []).length) : null;
+    const order = it.type === 'MCQ' ? optOrder(it, S.sid, t.id) : null;
     $('#app').innerHTML = `<div class="runner"><div class="runhead">
       <button class="iconbtn" id="rx">${ICON.back}</button>
       <div class="grow" style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div><div style="font-size:.75rem;opacity:.85">Question ${i + 1} of ${items.length}</div></div>
@@ -1599,7 +1723,7 @@ function runTest(t, n) {
     if ($('#sub')) $('#sub').onclick = () => askSubmit();
     $('#rev').onclick = () => { const k = st.review.indexOf(it.qid); if (k >= 0) st.review.splice(k, 1); else st.review.push(it.qid); save(); render(); };
     $('#pal').onclick = openPalette;
-    $('#rx').onclick = async () => { if (await confirmBox('Leave the test?', 'Your answers stay saved on this phone and you can resume from the Tests page.' + (st.deadline ? ' The timer keeps running.' : ''), 'Leave')) { stopTimer(); S.view = 'tests'; sTestsView(); } };
+    $('#rx').onclick = async () => { if (await confirmBox('Leave the test?', `Your answers stay saved on this phone and you can resume from the ${practice ? 'Home' : 'Tests'} page.` + (st.deadline ? ' The timer keeps running.' : ''), 'Leave')) { stopTimer(); S.view = 'tests'; sTestsView(); } };
     tick();
   }
   function openPalette() {
@@ -1621,6 +1745,7 @@ function runTest(t, n) {
   async function submit(auto) {
     if (submitting) return; submitting = true; stopTimer();
     $('#app').innerHTML = `<div class="runner"><div class="runbody center">${spinner()}<p>${auto ? "Time's up! " : ''}Submitting your answers…</p></div></div>`;
+    if (practice) return submitPractice(auto);
     const aid = `${S.sid}_${t.id}_${n}`;
     const att = clean({
       sid: S.sid, uid: S.user.uid, tid: t.id, n, title: t.title, kind: t.kind || 'custom', grade: myGrade(),
@@ -1642,6 +1767,35 @@ function runTest(t, n) {
       $('#app').innerHTML = `<div class="runner"><div class="runbody"><div class="card"><h3>Could not submit</h3><p class="muted">${esc(errMsg(e))}</p>
         <p class="small">Your answers are still saved on this phone. Check your internet and try again.</p><button class="btn block" id="retry">Try again</button></div></div></div>`;
       $('#retry').onclick = () => submit(auto);
+    }
+  }
+  async function submitPractice(auto) {
+    const pid = `${S.sid}_${t.id}`;
+    const g = myGrade();
+    const chs = [...new Set(items.map(i => Number(i.chapter)))].sort((a, b) => a - b);
+    try {
+      const keyDocs = await Promise.all(chs.map(c => getD('poolKeys/' + poolId(g, c)).catch(() => null)));
+      const keyItems = {}; keyDocs.forEach(d => d && Object.assign(keyItems, d.items || {}));
+      const responses = Object.fromEntries(Object.entries(st.responses).filter(([, v]) => v.o != null).map(([k, v]) => [k, { o: v.o }]));
+      const sc = practiceScore(items, responses, keyItems);
+      const rec = clean({ sid: S.sid, uid: S.user.uid, mid: t.id, grade: g, title: t.title, chapters: chs, qids: items.map(i => i.qid), responses,
+        score: sc.score, max: sc.max, correct: sc.correct, wrong: sc.wrong, blank: sc.blank, timer: t.timer || 0,
+        startedAt: st.startedAt, submittedAt: now(), timeTaken: Math.round((now() - st.startedAt) / 1000), autoSubmitted: !!auto });
+      await setDoc(D('practice/' + pid), rec);
+      lsDel(key); SC.practice = undefined;
+      toast('Submitted!');
+      showPracticeResult({ id: pid, ...rec }, items, keyItems);
+    } catch (e) {
+      const existing = await getD('practice/' + pid).catch(() => null);
+      if (existing) { lsDel(key); SC.practice = undefined; return showPracticeResult(existing); }
+      submitting = false; console.error(e);
+      const off = e && e.code === 'permission-denied';
+      $('#app').innerHTML = `<div class="runner"><div class="runbody"><div class="card"><h3>Could not submit</h3>
+        <p class="muted">${off ? 'Practice mocks may have been switched off by your teacher.' : esc(errMsg(e))}</p>
+        <p class="small">Your answers are still saved on this phone. Check your internet and try again.</p><button class="btn block" id="retry">Try again</button>
+        <div class="sp"></div><button class="btn ghost block" id="discard">Discard this practice mock</button></div></div></div>`;
+      $('#retry').onclick = () => submit(auto);
+      $('#discard').onclick = async () => { if (await confirmBox('Discard this practice mock?', 'Your answers on this phone will be deleted.', 'Discard', true)) { lsDel(key); S.view = 'tests'; sTestsView(); } };
     }
   }
   function tick() {
@@ -1699,7 +1853,7 @@ async function showResult(att, test) {
       const g = att.grades ? att.grades[ai.qid] : undefined;
       badge = g == null ? `<span class="chip p">Teacher to mark · ${ai.marks}</span>` : `<span class="chip ${g >= ai.marks ? 'g' : g > 0 ? 'a' : 'r'}">${fmtNum(g)}/${ai.marks}</span>`;
     }
-    const order = ai.type === 'MCQ' && it && it.options ? optionOrder(S.sid, att.tid, ai.qid, it.options.length) : null;
+    const order = ai.type === 'MCQ' && it && it.options ? optOrder(it, S.sid, att.tid) : null;
     const sol = (s.solution || []).map(b => (b.x && order) ? { ...b, x: remapOptionLetters(b.x, order) } : b);
     const qview = it ? (open ? questionHtml(it, { order, chosen: resp && resp.o, reveal: true, answer: k.answer })
       : questionHtml(it, { order, chosen: resp && resp.o, locked: true })) : '<p class="muted">Question text unavailable.</p>';
@@ -1740,6 +1894,123 @@ async function sendStudentMsg(text, extra = {}) {
   b.set(D(`chats/${S.sid}/messages/${msgId()}`), clean({ from: 's', text, at, kind: extra.kind || 'text', tid: extra.tid, title: extra.title }));
   b.set(D('chats/' + S.sid), { sid: S.sid, name: S.profile.name || S.sid, grade: myGrade(), lastAt: at, lastText: text.slice(0, 140), lastFrom: 's', sAt: at, sRead: at }, { merge: true });
   await b.commit();
+}
+
+// ---------- PRACTICE MOCKS (made by the student; MCQs from the practice pool the teacher publishes) ----------
+// pool/{gGGcCC}: questions without answers · poolKeys/{gGGcCC}: answers + solutions · practice/{sid}_{mid}: the student's result
+function practiceScore(items, responses, keyItems) {
+  const r = { score: 0, max: 0, correct: 0, wrong: 0, blank: 0 };
+  items.forEach(it => {
+    const m = Number(it.marks) || 1; r.max += m;
+    const resp = responses[it.qid]; const k = keyItems[it.qid];
+    if (!resp || resp.o == null) r.blank++;
+    else if (k && resp.o === k.answer) { r.correct++; r.score += m; } else r.wrong++;
+  });
+  return r;
+}
+function resumeSaved(tid, n) {
+  const v = lsGet(progKey(tid, n));
+  if (v && v.practice && v.mock) return runTest({ id: tid, title: v.mock.title, kind: 'practice', timer: v.mock.timer, items: v.mock.items }, 1, { practice: true, chapters: v.mock.chapters });
+  return openTestIntro(tid);
+}
+const PACES = [[0, 'No timer'], [1, '1 min per question'], [2, '2 min per question']];
+async function sPracticeBuilder(preCh) {
+  const g = myGrade();
+  const pg = sShell('tests', 'Practice mock', spinner(), { back: () => sTestsView(), sub: `Class ${g} · make your own` });
+  if (!practiceOn()) { pg.innerHTML = '<div class="card empty">Practice mocks are switched off at the moment.</div>'; return; }
+  let pool;
+  try { pool = await sPool(true); } catch (e) { pg.innerHTML = `<div class="card">${esc(errMsg(e))}</div>`; return; }
+  pool = pool.filter(p => (p.items || []).length);
+  if (!pool.length) { pg.innerHTML = `<div class="card empty">Your teacher hasn't added practice questions for Class ${g} yet.</div>`; return; }
+  const past = await sPractice();
+  const seenQ = new Set(past.flatMap(p => p.qids || []));
+  const going = inProgressList().filter(v => v.practice);
+  const sel = new Set(preCh && pool.some(p => p.chapter === preCh) ? [preCh] : []);
+  let count = 10, pace = 1;
+  const draw = () => {
+    const avail = pool.filter(p => sel.has(p.chapter)).reduce((s, p) => s + p.items.length, 0);
+    const n = Math.min(count, avail);
+    const fresh = pool.filter(p => sel.has(p.chapter)).reduce((s, p) => s + p.items.filter(i => !seenQ.has(i.qid)).length, 0);
+    pg.innerHTML = `${going.length ? going.map(v => `<div class="card row" style="cursor:pointer" data-resume="${esc(v.tid)}"><div class="grow"><b>${esc(v.title)}</b><div class="small muted">Practice mock in progress</div></div><span class="btn sm">Resume</span></div>`).join('') : ''}
+      <div class="info small">🎯 Practice mocks are for you. They don't count in your results, and you see the answers and full solutions as soon as you submit.</div>
+      <div class="card"><div class="row"><h3 class="grow">1. Choose chapters</h3><button class="btn ghost sm" id="pall">${sel.size === pool.length ? 'Clear' : 'All chapters'}</button></div>
+        <p class="tiny muted" style="margin:0 0 6px">Pick one chapter, or several for a mixed mock.</p>
+        ${pool.map(p => `<label class="li pchk" style="cursor:pointer"><input type="checkbox" data-pc="${p.chapter}" ${sel.has(p.chapter) ? 'checked' : ''}>
+          <div class="grow"><div class="t">${p.chapter}. ${esc(chName(g, p.chapter))}</div><div class="tiny muted">${p.items.length} question${p.items.length === 1 ? '' : 's'}</div></div></label>`).join('')}</div>
+      <div class="card"><h3>2. How many questions?</h3><div class="chips">${[5, 10, 15, 20, 30, 50].map(k => `<button class="toggle ${count === k ? 'on' : ''}" data-cnt="${k}" ${avail && k > avail && k !== 5 ? 'disabled' : ''}>${k}</button>`).join('')}</div>
+        <p class="tiny muted" style="margin:8px 0 0">${sel.size ? `${avail} question${avail === 1 ? '' : 's'} in the chosen chapter${sel.size > 1 ? 's' : ''}${fresh < avail ? ` · ${fresh} you haven't practised yet (these come first)` : ''}.` : 'Choose at least one chapter.'}</p></div>
+      <div class="card"><h3>3. Timer</h3><div class="chips">${PACES.map(([k, l]) => `<button class="toggle ${pace === k ? 'on' : ''}" data-pace="${k}">${l}</button>`).join('')}</div></div>
+      <button class="btn block" id="pgo" ${n ? '' : 'disabled'}>${n ? `Start: ${n} questions${pace ? ` · ${n * pace} min` : ''}` : 'Choose a chapter'}</button>`;
+    $$('[data-resume]', pg).forEach(b => b.onclick = () => resumeSaved(b.dataset.resume, 1));
+    $$('[data-pc]', pg).forEach(cb => cb.onchange = () => { const c = Number(cb.dataset.pc); cb.checked ? sel.add(c) : sel.delete(c); draw(); });
+    $('#pall').onclick = () => { if (sel.size === pool.length) sel.clear(); else pool.forEach(p => sel.add(p.chapter)); draw(); };
+    $$('[data-cnt]', pg).forEach(b => b.onclick = () => { count = Number(b.dataset.cnt); draw(); });
+    $$('[data-pace]', pg).forEach(b => b.onclick = () => { pace = Number(b.dataset.pace); draw(); });
+    $('#pgo').onclick = () => {
+      const chosen = pool.filter(p => sel.has(p.chapter));
+      const seed = Math.floor(Math.random() * 1e9);
+      // questions you haven't practised come first; spread evenly over the chosen chapters
+      const lists = chosen.map((p, i) => [...shuffled(p.items.filter(x => !seenQ.has(x.qid)), seed + i), ...shuffled(p.items.filter(x => seenQ.has(x.qid)), seed + 99 + i)]);
+      const picked = [];
+      while (picked.length < n && lists.some(l => l.length)) for (const l of lists) { if (l.length && picked.length < n) picked.push(l.shift()); }
+      picked.sort((a, b) => a.chapter - b.chapter);
+      const chs = chosen.map(p => p.chapter);
+      const title = chs.length === 1 ? `Practice · Ch ${chs[0]} ${chName(g, chs[0])}` : chs.length === pool.length && pool.length > 2 ? 'Practice · All chapters' : `Practice · Mixed (Ch ${chs.join(', ')})`;
+      const mid = 'pm' + now().toString(36);
+      runTest({ id: mid, title, kind: 'practice', timer: pace * picked.length, items: picked.map(x => ({ ...x, marks: Number(x.marks) || 1 })) }, 1, { practice: true, chapters: chs });
+    };
+  };
+  draw();
+}
+async function loadPracticeQuestions(grade, chapters) {
+  const itemById = {}, keyItems = {};
+  await Promise.all((chapters || []).map(async c => {
+    const [p, k] = await Promise.all([getD('pool/' + poolId(grade, c)).catch(() => null), getD('poolKeys/' + poolId(grade, c)).catch(() => null)]);
+    ((p && p.items) || []).forEach(i => itemById[i.qid] = i);
+    Object.assign(keyItems, (k && k.items) || {});
+  }));
+  return { itemById, keyItems };
+}
+// review of a practice mock: shared by the student (Tests tab) and the teacher (Practice mocks page)
+function practiceReviewHtml(rec, itemById, keyItems, sid) {
+  const resp = rec.responses || {};
+  return (rec.qids || []).map((qid, idx) => {
+    const it = itemById[qid]; const k = keyItems[qid]; const r = resp[qid];
+    if (!it) return `<div class="rq all"><div class="hd"><b>Q${idx + 1}</b></div><p class="muted small">This question is no longer in the practice questions.</p></div>`;
+    let cls = 'all', badge;
+    if (!r || r.o == null) { cls += ' blank'; badge = '<span class="chip n">Not answered</span>'; }
+    else if (k && r.o === k.answer) badge = `<span class="chip g">Correct · +${Number(it.marks) || 1}</span>`;
+    else { cls += ' wrong'; badge = '<span class="chip r">Wrong · 0</span>'; }
+    const order = optOrder(it, sid, rec.mid);
+    const sol = ((k && k.solution) || []).map(b => b.x ? { ...b, x: remapOptionLetters(b.x, order) } : b);
+    return `<div class="rq ${cls}"><div class="hd"><b>Q${idx + 1}</b><span class="chip n">Ch ${esc(it.chapter)}</span>${badge}</div>
+      ${questionHtml(it, { order, chosen: r && r.o, reveal: !!k, answer: k && k.answer, locked: !k })}
+      ${sol.length ? `<details class="sol" ${cls.includes('wrong') ? 'open' : ''}><summary>Show full solution ▾</summary><div class="solbody qtext">${renderBlocks(sol)}</div></details>` : ''}</div>`;
+  }).join('');
+}
+async function showPracticeResult(rec, items, keyItems) {
+  stopTimer();
+  const pg = sShell('tests', rec.title || 'Practice mock', spinner(), { back: () => sTestsView(), sub: 'Practice mock · not counted in results' });
+  let itemById = {};
+  if (items) items.forEach(i => itemById[i.qid] = i);
+  else {
+    try { ({ itemById, keyItems } = await loadPracticeQuestions(rec.grade || myGrade(), rec.chapters)); }
+    catch (e) { console.warn(e); }
+  }
+  keyItems = keyItems || {};
+  const haveKeys = Object.keys(keyItems).length > 0;
+  pg.innerHTML = `<div class="scorehero">
+      <div><div class="sv">${rec.score == null ? '–' : fmtNum(rec.score)}/${rec.max || (rec.qids || []).length}</div><div class="sl">Score (${rec.correct || 0} right, ${rec.wrong || 0} wrong, ${rec.blank || 0} blank)</div></div>
+      <div><div class="sv">${pct(rec.score || 0, rec.max || 1)}%</div><div class="sl">Percentage</div></div>
+      <div><div class="sv" style="font-size:1.2rem">${fmtDur(rec.timeTaken || 0)}</div><div class="sl">Time taken${rec.autoSubmitted ? ' (auto-submitted)' : ''}</div></div></div>
+    ${haveKeys ? '' : '<div class="card" style="margin-top:12px;background:var(--syellow);border-color:#f3e3a1"><p class="small" style="margin:0">The solutions can\'t be shown right now. Practice mocks may be switched off by your teacher.</p></div>'}
+    <div class="chips" style="margin:16px 0 4px"><button class="toggle on" data-f="all">All</button><button class="toggle" data-f="wrong">Wrong</button><button class="toggle" data-f="blank">Unanswered</button></div>
+    <div id="rqs">${practiceReviewHtml(rec, itemById, keyItems, S.sid)}</div>
+    ${practiceOn() ? '<div class="sp"></div><button class="btn block" id="again">🎯 Make another practice mock</button>' : ''}`;
+  const box = $('#rqs'); fillImages(box);
+  $$('[data-f]', pg).forEach(b => b.onclick = () => { $$('[data-f]', pg).forEach(x => x.classList.toggle('on', x === b)); $$('.rq', box).forEach(r => r.classList.toggle('hidden', !r.classList.contains(b.dataset.f))); });
+  $$('details.sol', box).forEach(d => d.addEventListener('toggle', () => { if (d.open) fillImages(d); }));
+  if ($('#again')) $('#again').onclick = () => sPracticeBuilder((rec.chapters || []).length === 1 ? rec.chapters[0] : undefined);
 }
 
 // ---------- CHAT ----------
@@ -1795,32 +2066,38 @@ async function sRevise() {
     if (!nums.length) { pg.innerHTML = `<div class="card empty">Your teacher hasn't added revision notes for Class ${g} yet.</div>`; return; }
     const rated = nums.map(n => conf[confKey(g, n)]).filter(Boolean);
     const avg = rated.length ? rated.reduce((a, c) => a + c.s, 0) / rated.length : 0;
+    const files = sFiles(res), vids = sVideos(res);
     pg.innerHTML = `<div class="card row"><div class="grow"><b>Your confidence</b><div class="small muted">${rated.length ? `${rated.length} of ${nums.length} chapters rated · average ${avg.toFixed(1)} ★` : 'Open a chapter and tap the stars to show how confident you feel.'}</div></div>${rated.length ? starsHtml(avg) : ''}</div>
       <div class="card" style="padding:4px 14px">${nums.map(n => {
-        const r = rev[n]; const nr = res.filter(x => Number(x.chapter) === n).length; const c = conf[confKey(g, n)];
+        const r = rev[n]; const nr = files.filter(x => Number(x.chapter) === n).length; const nv = vids.filter(x => Number(x.chapter) === n).length; const c = conf[confKey(g, n)];
         const info = [r && (r.formulas || []).length ? 'Formulas' : '', r && (r.summary || []).length ? 'Summary' : '', nr ? `${nr} file${nr > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ');
-        return `<div class="li" data-ch="${n}"><div class="grow"><div class="t">${n}. ${esc(chName(g, n))}</div><div class="small muted">${info || 'Nothing added yet'}</div></div>
+        return `<div class="li" data-ch="${n}"><div class="grow"><div class="t">${n}. ${esc(chName(g, n))}</div><div class="small muted">${info || (nv ? 'Video' : 'Nothing added yet')}</div></div>
+          ${nv ? `<button class="vbtn" data-vch="${n}" aria-label="Watch the video for chapter ${n}">${ICON.play}<span>Video</span></button>` : ''}
           <div class="right">${c ? starsHtml(c.s, 'sm') : '<span class="tiny muted">Not rated</span>'}</div><span class="muted">›</span></div>`;
       }).join('')}</div>`;
     $$('[data-ch]', pg).forEach(el => el.onclick = () => sChapter(Number(el.dataset.ch)));
+    $$('[data-vch]', pg).forEach(b => b.onclick = e => { e.stopPropagation(); sChapter(Number(b.dataset.vch), 'v'); });
   } catch (e) { pg.innerHTML = `<div class="card">${esc(errMsg(e))}</div>`; }
 }
 async function sChapter(n, tab, back) {
   const g = myGrade();
   const pg = sShell('rev', `${n}. ${chName(g, n)}`, spinner(), { back: back || (() => sRevise()), sub: `Class ${g} · Chapter ${n}` });
   try {
-    const [rev, res, conf, tests] = await Promise.all([sRev(), sRes(), sConf(), sTests().catch(() => [])]);
+    const [rev, res, conf, tests, pool] = await Promise.all([sRev(), sRes(), sConf(), sTests().catch(() => []), practiceOn() ? sPool().catch(() => []) : []]);
     const r = rev[n] || {};
-    const files = res.filter(x => Number(x.chapter) === n).sort((a, b) => resTypeOrder(a.type) - resTypeOrder(b.type) || (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(b.title));
-    const segs = [['f', 'Formulas', (r.formulas || []).length], ['s', 'Summary', (r.summary || []).length], ['n', 'Notes & PDFs', files.length]];
-    tab = tab || (segs.find(x => x[2]) || segs[0])[0];
+    const files = sFiles(res).filter(x => Number(x.chapter) === n).sort((a, b) => resTypeOrder(a.type) - resTypeOrder(b.type) || (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(b.title));
+    const vids = sVideos(res).filter(x => Number(x.chapter) === n);
+    const segs = [['f', 'Formulas', (r.formulas || []).length], ['s', 'Summary', (r.summary || []).length], ['v', '▶ Video', vids.length], ['n', 'Notes & PDFs', files.length]].filter(x => x[0] !== 'v' || x[2]);
+    tab = tab && segs.some(x => x[0] === tab) ? tab : (segs.find(x => x[2]) || segs[0])[0];
     const ct = tests.find(t => t.kind === 'chapter' && Number(t.chapter) === n);
+    const inPool = pool.some(p => p.chapter === n && (p.items || []).length);
     let cur = (conf[confKey(g, n)] || {}).s || 0;
     pg.innerHTML = `<div class="card conf"><div class="small" style="font-weight:600">How confident are you in this chapter now?</div>
         <div class="starin" id="stin">${[1, 2, 3, 4, 5].map(i => `<button data-s="${i}" aria-label="${i} star${i > 1 ? 's' : ''}">★</button>`).join('')}</div>
         <div class="small muted" id="stlab"></div></div>
       <div class="seg">${segs.map(([k, l]) => `<button data-seg="${k}">${l}</button>`).join('')}</div><div id="rc"></div>
-      ${ct ? `<div class="sp"></div><button class="btn sec block wrapbtn" id="prac">${ICON.tests} Practise: ${esc(ct.title)}</button>` : ''}`;
+      ${ct ? `<div class="sp"></div><button class="btn sec block wrapbtn" id="prac">${ICON.tests} Practise: ${esc(ct.title)}</button>` : ''}
+      ${inPool ? `<div class="sp"></div><button class="btn sec block wrapbtn" id="pmock">${ICON.target} Make a practice mock on this chapter</button>` : ''}`;
     const paint = () => { $$('#stin button').forEach(b => b.classList.toggle('on', Number(b.dataset.s) <= cur)); $('#stlab').textContent = CONF_LABEL[cur]; };
     paint();
     $$('#stin button').forEach(b => b.onclick = async () => {
@@ -1838,11 +2115,13 @@ async function sChapter(n, tab, back) {
       if (k === 's') box.innerHTML = (r.summary || []).length ? `<div class="card">${revSummaryHtml(r.summary)}</div>` : '<div class="card empty">No summary added yet.</div>';
       if (k === 'n') box.innerHTML = files.length ? `<div class="card">${[...new Set(files.map(f => f.type))].map(tp => `<div style="margin-bottom:12px"><div class="small" style="font-weight:700;color:var(--ink2);margin-bottom:6px">${esc(tp)}</div>
           <div class="row wrap">${files.filter(f => f.type === tp).map(f => `<a class="btn sec sm" target="_blank" rel="noopener" href="${esc(f.link)}">${ICON.link} ${esc(f.title)}</a>`).join('')}</div></div>`).join('')}</div>` : '<div class="card empty">No notes or PDFs added yet.</div>';
+      if (k === 'v') box.innerHTML = vids.map(videoPlayerHtml).join('<div class="sp"></div>');
       fillImages(box);
     };
     $$('[data-seg]', pg).forEach(b => b.onclick = () => draw(b.dataset.seg));
     draw(tab);
     if ($('#prac')) $('#prac').onclick = () => openTestIntro(ct.id);
+    if ($('#pmock')) $('#pmock').onclick = () => sPracticeBuilder(n);
   } catch (e) { pg.innerHTML = `<div class="card">${esc(errMsg(e))}</div>`; }
 }
 
@@ -1886,10 +2165,42 @@ function sProfile() {
   const row = (l, v) => `<div class="li" style="cursor:default"><div class="grow"><div class="tiny muted">${l}</div><div>${esc(v || '–')}</div></div></div>`;
   const pg = sShell('me', 'Profile', `<div class="card center"><div class="avatar lg" style="margin:0 auto 8px">${avatarSvg(p.gender)}</div><h2>${esc(p.name || '')}</h2><div class="muted">ID: ${esc(S.sid)} · Class ${myGrade()}</div></div>
     <div class="card" style="padding:4px 16px">${row('Class', 'Class ' + myGrade())}${row('Date of birth', fmtDob(p.dob))}${row('School', p.school)}${row('Mobile', p.mobile)}${row('Email', p.email)}${row('Address', p.address)}</div>
-    <p class="tiny muted center">Only you and your teacher can see these details. Ask your teacher to correct anything.</p>
+    <button class="btn block" id="edp">✏️ Edit my details</button>
+    <p class="tiny muted center">Only you and your teacher can see these details. Your name and class can only be changed by your teacher.</p>
     <button class="btn sec block" id="cpw">Change password</button><div class="sp"></div><button class="btn danger block" id="so">${ICON.out} Sign out</button>`);
+  $('#edp').onclick = () => sProfileEdit(() => sProfile());
   $('#cpw').onclick = changeOwnPassword;
   $('#so').onclick = doSignOut;
+}
+// the student fills in their own details (name and class stay with the teacher)
+function sProfileEdit(back) {
+  const p = S.profile;
+  const miss = missingProfile(p);
+  const pg = sShell('me', 'Edit my details', `${miss.length ? `<div class="info small">Please add your ${esc(andList(miss))}.</div>` : ''}
+    <div class="card"><p class="small muted" style="margin-top:0">${esc(p.name || S.sid)} · Class ${myGrade()} · ID: ${esc(S.sid)}</p>
+      <label class="field"><span>Date of birth</span><input class="input" id="pdob" type="date" value="${esc(p.dob || '')}" max="${new Date().toISOString().slice(0, 10)}"></label>
+      <div class="field"><span>Avatar</span><div class="row">
+        <label class="row" style="cursor:pointer"><input type="radio" name="pg" value="m" ${p.gender !== 'f' ? 'checked' : ''}><div class="avatar">${avatarSvg('m')}</div> Boy</label>
+        <label class="row" style="cursor:pointer;margin-left:14px"><input type="radio" name="pg" value="f" ${p.gender === 'f' ? 'checked' : ''}><div class="avatar">${avatarSvg('f')}</div> Girl</label></div></div>
+      <label class="field"><span>Mobile number</span><input class="input" id="pmob" inputmode="tel" maxlength="20" value="${esc(p.mobile || '')}"></label>
+      <label class="field"><span>Email (optional)</span><input class="input" id="pem" inputmode="email" maxlength="120" value="${esc(p.email || '')}"></label>
+      <label class="field"><span>School name</span><input class="input" id="psch" maxlength="120" value="${esc(p.school || '')}"></label>
+      <label class="field"><span>Address</span><textarea class="input" id="padd" maxlength="300" style="min-height:70px">${esc(p.address || '')}</textarea></label>
+      <div id="perr"></div><button class="btn block" id="psave">Save</button></div>`, { back });
+  $('#psave').onclick = () => busy($('#psave'), async () => {
+    const err = m => $('#perr').innerHTML = `<div class="err">${esc(m)}</div>`;
+    const data = { dob: $('#pdob').value || '', gender: $('input[name=pg]:checked').value, mobile: $('#pmob').value.trim(), email: $('#pem').value.trim(),
+      school: $('#psch').value.trim(), address: $('#padd').value.trim() };
+    if (data.mobile && !/^[+]?[0-9 ()-]{6,20}$/.test(data.mobile)) return err('Mobile number: use digits only, e.g. 9876543210.');
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return err('That email address does not look right.');
+    if (data.dob && !/^\d{4}-\d{2}-\d{2}$/.test(data.dob)) return err('Choose your date of birth from the calendar.');
+    const stamp = now();
+    try { await updateDoc(D('students/' + S.sid), { ...data, selfUpdatedAt: stamp, updatedAt: stamp }); }
+    catch (e) { if (e && e.code === 'permission-denied') return err("Saving your details isn't switched on yet. Please tell your teacher."); throw e; }
+    Object.assign(S.profile, data, { selfUpdatedAt: stamp, updatedAt: stamp });
+    toast('Saved ✓');
+    back();
+  });
 }
 
 // ================= ADMIN =================
@@ -1966,8 +2277,9 @@ async function migrateV2() {
   } catch (e) { close(); throw e; }
 }
 
-const ANAV = [['dash', 'Dashboard', ICON.home], ['messages', 'Messages', ICON.chat], ['students', 'Students', ICON.users], ['results', 'Results & export', ICON.chart], ['marking', 'Marking', ICON.pen],
-  ['tests', 'Tests', ICON.tests], ['questions', 'Question bank', ICON.q], ['revision', 'Revision notes', ICON.rev], ['classes', 'Classes & chapters', ICON.book], ['resources', 'Resources', ICON.link], ['anns', 'Announcements', ICON.bell],
+const ANAV = [['dash', 'Dashboard', ICON.home], ['messages', 'Messages', ICON.chat], ['reminders', 'Reminders', ICON.clock], ['students', 'Students', ICON.users], ['results', 'Results & export', ICON.chart], ['marking', 'Marking', ICON.pen],
+  ['tests', 'Tests', ICON.tests], ['practice', 'Practice mocks', ICON.target], ['questions', 'Question bank', ICON.q], ['revision', 'Revision notes', ICON.rev], ['videos', 'Chapter videos', ICON.play],
+  ['classes', 'Classes & chapters', ICON.book], ['resources', 'Resources', ICON.link], ['anns', 'Announcements', ICON.bell],
   ['guide', 'Exam Guide', ICON.guide], ['settings', 'Settings', ICON.gear]];
 function aShell(sec, title, body, opts = {}) {
   stopView();
@@ -1989,7 +2301,7 @@ function aShell(sec, title, body, opts = {}) {
 }
 function aNav(sec, arg) {
   const f = { dash: aDash, messages: aMessages, revision: aRevision, students: aStudentsView, results: aResults, marking: aMarking, tests: aTestsView, questions: aQuestionsView, classes: aClasses,
-    resources: aResources, anns: aAnnsView, guide: aGuideEditor, settings: aSettings }[sec];
+    resources: aResources, anns: aAnnsView, guide: aGuideEditor, settings: aSettings, reminders: aRemindersView, practice: aPracticeView, videos: aVideos }[sec];
   return f(arg);
 }
 async function guard(pg, fn) { try { await fn(); } catch (e) { console.error(e); pg.innerHTML = `<div class="card"><h3>Something went wrong</h3><p class="muted">${esc(errMsg(e))}</p><button class="btn" onclick="location.reload()">Reload</button></div>`; } }
@@ -2007,7 +2319,7 @@ async function aDash() {
     const pend = officialAttempts(atts).filter(a => pendingCount(a) > 0).length;
     const byClass = GRADES.map(g => [g, studs.filter(s => studentGrade(s) === g).length]).filter(([, n]) => n);
     const steps = [
-      [nq > 0, 'Import the question bank', 'Choose the file question-bank.json (140 questions, 16 tests).', 'questions'],
+      [nq > 0, 'Import the question bank', 'Choose the file question-bank.json (140 questions, 16 tests), then pyq-mcqs-class10.json (140 PYQ MCQs).', 'questions'],
       [studs.length > 0, 'Add your students', 'Give each student an ID, password and class.', 'students'],
       [!!(S.settings.whatsapp), 'Add your WhatsApp number', 'Students get a button to send you photos of their working.', 'settings']];
     pg.innerHTML = `${steps.some(s => !s[0]) ? `<div class="card"><h3>Getting started</h3>${steps.map(([done, t, d, go]) => `
@@ -2021,6 +2333,9 @@ async function aDash() {
         <button class="kpi" data-go="results"><b>${atts.length}</b><span>Attempts submitted</span></button>
         <button class="kpi" data-go="tests"><b>${tests.length}</b><span>Tests</span></button>
         <button class="kpi" data-go="questions"><b>${nq}</b><span>Questions</span></button>
+        <button class="kpi" data-go="reminders"><b>⏰</b><span>Reminders</span></button>
+        <button class="kpi" data-go="practice"><b>🎯</b><span>Practice mocks · ${S.settings.practiceOn ? 'on' : 'off'}</span></button>
+        <button class="kpi" data-go="videos"><b>▶️</b><span>Chapter videos</span></button>
         <button class="kpi" data-go="revision"><b>📐</b><span>Revision notes</span></button>
         <button class="kpi" data-go="classes"><b>📚</b><span>Classes & chapters</span></button>
         <button class="kpi" data-go="anns"><b>📣</b><span>Announcements</span></button>
@@ -2109,7 +2424,8 @@ function aStudentForm(s) {
 async function aStudentDetail(sid) {
   const pg = aShell('students', 'Student', spinner(), { back: () => aStudentsView() });
   guard(pg, async () => {
-    const [studs, atts, keys, confAll] = await Promise.all([aStudents(), aAtts(), aKeys(), aConf(true)]);
+    const [studs, atts, keys, confAll, prac] = await Promise.all([aStudents(), aAtts(), aKeys(), aConf(true),
+      listC('practice', where('sid', '==', sid)).catch(() => [])]);
     const s = studs.find(x => x.id === sid) || await getD('students/' + sid);
     if (!s) { pg.innerHTML = '<div class="card empty">Student not found.</div>'; return; }
     const g = studentGrade(s);
@@ -2121,7 +2437,8 @@ async function aStudentDetail(sid) {
     const row = (l, v) => `<div><div class="tiny muted">${l}</div><div>${esc(v || '–')}</div></div>`;
     pg.innerHTML = `<div class="card"><div class="row"><div class="avatar lg">${avatarSvg(s.gender)}</div><div class="grow"><h2 style="margin:0">${esc(s.name)}</h2><div class="muted">Class ${g} · ID: ${esc(s.id)}</div></div></div>
       <div class="grid2" style="margin-top:12px">${row('Date of birth', fmtDob(s.dob))}${row('School', s.school)}${row('Mobile', s.mobile)}${row('Email', s.email)}${row('Address', s.address)}</div>
-      <div class="row wrap" style="margin-top:14px"><button class="btn sm" id="msg">${ICON.chat} Message</button><button class="btn sec sm" id="ed">Edit</button><button class="btn sec sm" id="rp">Reset password</button><button class="btn danger sm" id="del">Delete</button></div></div>
+      <p class="tiny muted" style="margin:10px 0 0">${s.selfUpdatedAt ? `The student last updated these details on ${fmtDate(s.selfUpdatedAt)}.` : 'The student has not updated these details themselves yet.'}${missingProfile(s).length ? ` Missing: ${esc(missingProfile(s).join(', '))}.` : ''}</p>
+      <div class="row wrap" style="margin-top:14px"><button class="btn sm" id="msg">${ICON.chat} Message</button><button class="btn sec sm" id="ed">Edit</button><button class="btn sec sm" id="rmd">⏰ Remind to update profile</button><button class="btn sec sm" id="rp">Reset password</button><button class="btn danger sm" id="del">Delete</button></div></div>
       <div class="sectiontitle">Chapter-wise: score (official attempts) and the student's own confidence</div>
       <div class="card">${chRows.length ? chRows.map(c => { const v = perCh[c]; const cf = conf[confKey(g, c)]; const p = v && v.max ? pct(v.got, v.max) : null;
         return `<div style="margin:10px 0"><div class="row small"><span class="grow">${c}. ${esc(chName(g, c))}</span>${cf ? starsHtml(cf.s, 'sm') : '<span class="tiny muted">not rated</span>'}${p != null ? `<b style="min-width:42px;text-align:right">${p}%</b>` : '<span class="tiny muted" style="min-width:42px;text-align:right">no test</span>'}</div>
@@ -2130,7 +2447,11 @@ async function aStudentDetail(sid) {
       <div class="sectiontitle">Attempts</div>
       <div class="card" style="padding:4px 14px">${mine.length ? mine.map(a => { const r = scoreAttempt(a, keys[a.tid]);
         return `<div class="li" data-att="${esc(a.id)}"><div class="grow"><div class="t">${esc(a.title)}</div><div class="small muted">Attempt ${a.n}${a.n === 1 ? ' (official)' : ' (practice)'} · ${fmtDate(a.submittedAt)}</div></div>
-        <div class="right"><b>${fmtNum(r.total)}/${r.max}</b>${r.pending ? `<div class="tiny" style="color:var(--purple)">${r.pending} to mark</div>` : ''}</div></div>`; }).join('') : '<div class="empty">No attempts yet.</div>'}</div>`;
+        <div class="right"><b>${fmtNum(r.total)}/${r.max}</b>${r.pending ? `<div class="tiny" style="color:var(--purple)">${r.pending} to mark</div>` : ''}</div></div>`; }).join('') : '<div class="empty">No attempts yet.</div>'}</div>
+      ${prac.length ? `<div class="sectiontitle">Practice mocks the student made (not counted in results)</div><div class="card" style="padding:4px 14px">${prac.sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)).map(p => `<div class="li" data-pm="${esc(p.id)}"><div class="grow"><div class="t">${esc(p.title)}</div><div class="small muted">${fmtDate(p.submittedAt)} · ${(p.qids || []).length} questions · ${fmtDur(p.timeTaken || 0)}</div></div>
+        <div class="right"><b>${p.score == null ? '–' : fmtNum(p.score) + '/' + p.max}</b></div></div>`).join('')}</div>` : ''}`;
+    $$('[data-pm]', pg).forEach(el => el.onclick = () => aPracticeAttempt(prac.find(p => p.id === el.dataset.pm), () => aStudentDetail(sid)));
+    $('#rmd').onclick = () => profileReminderForm([s.id]);
     $('#ed').onclick = () => aStudentForm(s);
     $('#msg').onclick = () => aThread(s.id, () => aStudentDetail(sid));
     $('#rp').onclick = () => resetStudentPassword(s);
@@ -2164,8 +2485,10 @@ async function deleteStudent(s) {
   await busy(null, async () => {
     const inbox = await listC(`students/${s.id}/inbox`).catch(() => []);
     const msgs = await listC(`chats/${s.id}/messages`).catch(() => []);
+    const rems = await listC(`students/${s.id}/reminders`).catch(() => []);
     const ops = [['delete', 'students/' + s.id], ['delete', 'logins/' + s.id], ['delete', `students/${s.id}/private/seen`], ['delete', 'chats/' + s.id], ['delete', 'confidence/' + s.id]];
     msgs.forEach(m => ops.push(['delete', `chats/${s.id}/messages/${m.id}`]));
+    rems.forEach(r => ops.push(['delete', `students/${s.id}/reminders/${r.id}`]));
     if (s.uid) ops.push(['delete', 'users/' + s.uid]);
     inbox.forEach(x => ops.push(['delete', `students/${s.id}/inbox/${x.id}`]));
     await commitOps(ops); AC.students = undefined; toast('Student deleted'); aStudentsView();
@@ -2338,7 +2661,7 @@ function exportStudents(studs) {
 function buildTestDocs(t, qmap) {
   const tm = { ...TYPE_MARKS, ...(t.typeMarks || {}) };
   const qids = t.qids.filter(id => qmap[id]);
-  const items = qids.map(id => { const q = qmap[id]; return { qid: id, chapter: q.chapter, type: q.type, marks: Number(tm[q.type] ?? q.marks), stem: q.stem || [], options: q.options || null, parts: q.parts || null }; });
+  const items = qids.map(id => { const q = qmap[id]; return { qid: id, chapter: q.chapter, type: q.type, marks: Number(tm[q.type] ?? q.marks), stem: q.stem || [], options: q.options || null, parts: q.parts || null, fixed: q.fixed === true ? true : undefined }; });
   const key = {}, sol = {};
   qids.forEach(id => { const q = qmap[id]; key[id] = { answer: q.type === 'MCQ' ? (q.answer ?? null) : null }; sol[id] = { solution: q.solution || [], finalAnswer: q.finalAnswer || '' }; });
   return {
@@ -2459,11 +2782,12 @@ async function aBuilder(existing) {
         }
         const id = T.id || 't_' + now().toString(36);
         await saveTests([{ ...T, id, title: T.title.trim(), order: T.order ?? 200 }]);
+        await syncPool([T.grade, existing ? gradeOf(existing) : T.grade]);     // questions now in a test leave the practice pool
         toast('Test saved ✓'); aTestsView();
       });
       if ($('#bdel')) $('#bdel').onclick = async () => {
         if (!(await confirmBox('Delete this test?', 'Students will no longer see it. Their past attempts stay in your results and exports.', 'Delete', true))) return;
-        await busy($('#bdel'), async () => { await commitOps([['delete', 'tests/' + existing.id], ['delete', 'testKeys/' + existing.id], ['delete', 'testSolutions/' + existing.id]]); AC.tests = undefined; AC.keys = undefined; toast('Deleted'); aTestsView(); });
+        await busy($('#bdel'), async () => { await commitOps([['delete', 'tests/' + existing.id], ['delete', 'testKeys/' + existing.id], ['delete', 'testSolutions/' + existing.id]]); AC.tests = undefined; AC.keys = undefined; await syncPool([gradeOf(existing)]); toast('Deleted'); aTestsView(); });
       };
     };
     draw();
@@ -2549,6 +2873,7 @@ async function importBank(file) {
     AC.q = undefined; await aQ(true);
     say('Tests…');
     await saveTests((data.tests || []).map(t => ({ ...t, grade: Number(t.grade) || 10, published: true, solutionsOpen: false })));
+    if (S.settings.practiceOn) { say('Practice questions…'); await syncPool(data.questions.map(q => Number(q.grade) || 10)); }
     close();
     modal(`<h3>Import complete ✓</h3><p>${data.questions.length} questions and ${(data.tests || []).length} tests are ready. Students can see the tests now; solutions stay locked until you open them.</p><p class="small muted">Keep the file safe on your computer. Don't upload it to your website: it contains the answers.</p><button class="btn block" data-c>OK</button>`, (m, c) => m.querySelector('[data-c]').onclick = () => { c(); aQuestionsView(); });
   } catch (e) { close(); console.error(e); toast('Import stopped: ' + errMsg(e), 6000); }
@@ -2665,7 +2990,8 @@ function parseBulkRows(table, qmap, dateCells = {}) {
     const num = nextNum[k];
     const id = `g${pad(g)}c${pad(ch)}q${pad(num)}`;
     ok.push({ id, grade: g, chapter: ch, num, type, marks, difficulty, stem: textToBlocks(qtext), options, answer: type === 'MCQ' ? answer : null, parts,
-      solution, finalAnswer: type === 'MCQ' ? '' : solution.filter(b => b.t === 'ans').map(b => b.x).join(' · '), source: 'excel' });
+      solution, finalAnswer: type === 'MCQ' ? '' : solution.filter(b => b.t === 'ans').map(b => b.x).join(' · '), source: 'excel',
+      fixed: type === 'MCQ' && looksFixed({ stem: textToBlocks(qtext), options }) ? true : undefined });
   });
   return { ok, bad, dup };
 }
@@ -2709,7 +3035,7 @@ function bulkImport() {
         ${ok.length ? `<div class="sp"></div><button class="btn green block" id="bgo">Add ${ok.length} question${ok.length === 1 ? '' : 's'}</button>` : ''}`;
       if ($('#bgo', m)) $('#bgo', m).onclick = () => busy($('#bgo', m), async () => {
         for (let i = 0; i < ok.length; i += 15) await commitOps(ok.slice(i, i + 15).map(q => { const { id, ...rest } = q; return ['set', 'questions/' + id, clean({ ...rest, updatedAt: now() })]; }));
-        AC.q = undefined; close();
+        AC.q = undefined; await syncPool(ok.map(q => q.grade)); close();
         modal(`<h3>Added ${ok.length} questions ✓</h3><p class="small">To make a test from them: <b>Tests → + Create</b>, choose the class, then <b>Fill randomly</b> or <b>Pick by hand</b>.</p><button class="btn block" data-c>OK</button>`, (m2, c2) => m2.querySelector('[data-c]').onclick = () => { c2(); aQuestionsView(); });
       });
     });
@@ -2736,6 +3062,8 @@ function aQEditor(q) {
   Q.grade = gradeOf(Q);
   if (!Q.options || Q.options.length < 4) Q.options = [...(Q.options || []), '', '', '', ''].slice(0, 4);
   if (!Q.parts) Q.parts = [];
+  Q.fixed = q.fixed === true;
+  let fixTouched = !isNew;           // a new Assertion–Reason question gets "keep order" ticked by itself
   const pg = aShell('questions', isNew ? 'Add question' : `Edit ${q.id}`, '', { back: () => aQuestionsView() });
   const draw = () => {
     pg.innerHTML = `<div class="card"><div class="grid2">
@@ -2751,7 +3079,8 @@ function aQEditor(q) {
       <label class="field" style="margin-top:8px"><span>Question</span><textarea class="input code" id="qs">${esc(blocksToText(Q.stem))}</textarea></label>
       <label class="btn sec sm" style="cursor:pointer">🖼 Add figure to question<input type="file" accept="image/*" hidden data-addimg="qs"></label></div>
       ${Q.type === 'MCQ' ? `<div class="card"><h3>Options</h3>${Q.options.map((o, i) => `<div class="row" style="margin:6px 0"><label class="row" style="cursor:pointer"><input type="radio" name="ans" value="${i}" ${Q.answer === i ? 'checked' : ''}> <b>${'abcd'[i]}</b></label><input class="input grow" data-o="${i}" value="${esc(o)}"></div>`).join('')}
-        <p class="tiny muted">Tick the correct option. Students see the options in a shuffled order.</p></div>` : ''}
+        <p class="tiny muted">Tick the correct option. Students see the options in a shuffled order, unless you tick the box below.</p>
+        <label class="row" style="cursor:pointer;margin-top:4px"><input type="checkbox" id="qfix" ${Q.fixed ? 'checked' : ''}> <span class="small">Keep the options in this order (for Assertion–Reason, or when an option says “both (a) and (b)” or “none of these”)</span></label></div>` : ''}
       ${Q.type === 'CASE' ? `<div class="card"><h3>Parts</h3>${Q.parts.map((p, i) => `<div class="row" style="margin:6px 0"><b>(${esc(p.label)})</b><input class="input grow" data-pt="${i}" value="${esc(p.x)}"><input class="input" style="width:70px" type="number" min="0" step="0.5" data-pm="${i}" value="${p.marks}"><button class="btn ghost sm" data-prm="${i}">✕</button></div>`).join('')}
         <button class="btn sec sm" id="padd">+ Add part</button></div>` : ''}
       <div class="card"><label class="field"><span>Detailed solution</span><textarea class="input code" id="qsol" style="min-height:180px">${esc(blocksToText(Q.solution))}</textarea></label>
@@ -2763,12 +3092,14 @@ function aQEditor(q) {
       Q.grade = Number($('#qg').value); Q.chapter = Number($('#qc').value); Q.type = $('#qt').value; Q.marks = Number($('#qm').value) || 1; Q.difficulty = $('#qd').value;
       Q.stem = textToBlocks($('#qs').value); Q.solution = textToBlocks($('#qsol').value);
       if ($('[data-o]')) { Q.options = $$('[data-o]').map(i => i.value.trim()); const r = $('input[name=ans]:checked'); Q.answer = r ? Number(r.value) : null; }
+      if ($('#qfix')) Q.fixed = $('#qfix').checked;
       $$('[data-pt]').forEach(i => Q.parts[i.dataset.pt].x = i.value.trim()); $$('[data-pm]').forEach(i => Q.parts[i.dataset.pm].marks = Number(i.value) || 0);
     };
     const preview = () => { read(); $('#pv').innerHTML = questionHtml({ ...Q, options: Q.type === 'MCQ' ? Q.options : null }, { reveal: Q.type === 'MCQ', answer: Q.answer }) + `<div class="solbody qtext" style="margin-top:10px">${renderBlocks(Q.solution)}</div>`; fillImages($('#pv')); };
     $('#qg').onchange = () => { read(); Q.chapter = 1; draw(); };
     $('#qt').onchange = () => { read(); Q.marks = TYPE_MARKS[Q.type]; if (Q.type === 'CASE' && !Q.parts.length) Q.parts = [{ label: 'i', x: '', marks: 1 }, { label: 'ii', x: '', marks: 1 }, { label: 'iii', x: '', marks: 2 }]; draw(); };
     $('#prev').onclick = preview;
+    if ($('#qfix')) $('#qfix').onchange = () => { fixTouched = true; };
     if ($('#padd')) $('#padd').onclick = () => { read(); Q.parts.push({ label: ['i', 'ii', 'iii', 'iv', 'v', 'vi'][Q.parts.length] || String(Q.parts.length + 1), x: '', marks: 1 }); draw(); };
     $$('[data-prm]').forEach(b => b.onclick = () => { read(); Q.parts.splice(Number(b.dataset.prm), 1); Q.parts.forEach((p, i) => p.label = ['i', 'ii', 'iii', 'iv', 'v', 'vi'][i] || String(i + 1)); draw(); });
     $$('[data-addimg]').forEach(inp => inp.onchange = () => busy(null, async () => {
@@ -2782,6 +3113,7 @@ function aQEditor(q) {
       const err = m => $('#qerr').innerHTML = `<div class="err">${esc(m)}</div>`;
       if (!Q.stem.length) return err('Type the question.');
       if (Q.type === 'MCQ' && (Q.options.some(o => !o) || Q.answer == null)) return err('Fill all four options and tick the correct one.');
+      if (Q.type === 'MCQ' && !fixTouched && !Q.fixed && looksFixed(Q)) Q.fixed = true;
       const qmap = await aQ();
       let id = q.id;
       if (!id) {
@@ -2792,13 +3124,15 @@ function aQEditor(q) {
       const data = clean({
         grade: Q.grade, chapter: Q.chapter, num: Q.num || null, type: Q.type, marks: Q.marks, difficulty: Q.difficulty || '', stem: Q.stem,
         options: Q.type === 'MCQ' ? Q.options : null, answer: Q.type === 'MCQ' ? Q.answer : null,
-        parts: Q.type === 'CASE' ? Q.parts : null, solution: Q.solution,
+        parts: Q.type === 'CASE' ? Q.parts : null, solution: Q.solution, fixed: Q.type === 'MCQ' && Q.fixed ? true : undefined, source: q.source,
         finalAnswer: Q.type === 'MCQ' ? '' : Q.solution.filter(b => b.t === 'ans').map(b => b.x).join(' · '), updatedAt: now()
       });
       await setDoc(D('questions/' + id), data);
       qmap[id] = { id, ...data };
       const affected = (await aTests()).filter(t => (t.qids || []).includes(id));
       if (affected.length) await saveTests(affected.map(t => ({ ...t })));
+      if (isNew || gradeOf(q) === Q.grade) await syncPool([Q.grade], [...new Set([Q.chapter, q.chapter].filter(Boolean))]);
+      else await syncPool([Q.grade, gradeOf(q)]);
       toast(affected.length ? `Saved ✓ · updated ${affected.length} test${affected.length > 1 ? 's' : ''}` : 'Saved ✓');
       aQuestionsView();
     });
@@ -2809,6 +3143,7 @@ function aQEditor(q) {
         await deleteDoc(D('questions/' + q.id));
         const qmap = await aQ(); delete qmap[q.id];
         if (affected.length) await saveTests(affected.map(t => ({ ...t, qids: t.qids.filter(x => x !== q.id) })));
+        await syncPool([gradeOf(q)], [q.chapter]);
         toast('Deleted'); aQuestionsView();
       });
     };
@@ -3050,6 +3385,7 @@ async function aSettings() {
     <div class="card"><h3>Exports (open in Excel)</h3><p class="small muted">Backups are not available on the free Firebase plan, so download these regularly.</p>
       <div class="row wrap"><button class="btn" id="ex1">⬇ All results (CSV)</button><button class="btn sec" id="ex5">⬇ Class ${AC.g || 10} confidence (CSV)</button><button class="btn sec" id="ex2">⬇ Class ${AC.g || 10} chapter-wise (CSV)</button><button class="btn sec" id="ex4">⬇ Student list (CSV)</button><button class="btn sec" id="ex3">⬇ Full backup (JSON)</button></div></div>
     <div class="card"><h3>Your admin login</h3><p class="small">Admin ID: <b>${esc(S.adminDoc.loginId || '')}</b></p><button class="btn sec" id="cpw">Change password</button></div>
+    <p class="tiny muted center">App version ${APP_VERSION}</p>
     <button class="btn danger block" id="so">${ICON.out} Sign out</button>`;
   $('#wasave').onclick = () => busy($('#wasave'), async () => { const v = $('#wa').value.replace(/\D/g, ''); await setDoc(D('config/settings'), { ...S.settings, whatsapp: v, updatedAt: now() }); S.settings.whatsapp = v; toast('Saved'); });
   $('#ex1').onclick = () => busy($('#ex1'), async () => { const [atts, keys, studs] = await Promise.all([aAtts(true), aKeys(), aStudents()]); exportResults(atts, keys, studs); });
@@ -3057,7 +3393,7 @@ async function aSettings() {
   $('#ex4').onclick = () => busy($('#ex4'), async () => exportStudents(await aStudents(true)));
   $('#ex5').onclick = () => busy($('#ex5'), async () => exportConfidence(await aStudents(), await aConf(true), AC.g || 10));
   $('#ex3').onclick = () => busy($('#ex3'), async () => {
-    const names = ['questions', 'tests', 'testKeys', 'testSolutions', 'students', 'attempts', 'resources', 'announcements', 'images', 'content', 'config', 'revision', 'confidence', 'chats'];
+    const names = ['questions', 'tests', 'testKeys', 'testSolutions', 'students', 'attempts', 'resources', 'announcements', 'images', 'content', 'config', 'revision', 'confidence', 'chats', 'reminders', 'practice'];
     const out = { app: APP_NAME, exportedAt: new Date().toISOString() };
     for (const n of names) out[n] = await listC(n).catch(() => []);
     out.chatMessages = {};
@@ -3212,6 +3548,313 @@ function aRevEditor(g, n, d) {
     if (!(await confirmBox('Delete these notes?', 'Students will see “nothing added yet” for this chapter.', 'Delete', true))) return;
     await busy(null, async () => { await deleteDoc(D('revision/' + revId(g, n))); toast('Deleted'); aRevision(); });
   };
+}
+
+// ---------- REMINDERS ----------
+// reminders/{id}: what was sent and to whom (admin only) · students/{sid}/reminders/{id}: the copy that student sees on Home.
+// A reminder disappears for the student by itself once they take the test, or save their profile.
+const aRems = f => aLoad('rems', async () => (await listC('reminders')).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), f);
+function remDone(r, s, tidAtts) { return r.kind === 'test' ? (tidAtts[r.tid] || new Set()).has(s.id) : (s.selfUpdatedAt || 0) >= (r.createdAt || 0); }
+async function takersOf(tids) {               // tid -> Set of student IDs who have submitted it (any attempt)
+  const out = {};
+  await Promise.all([...new Set(tids)].map(async tid => { out[tid] = new Set((await listC('attempts', where('tid', '==', tid))).map(a => a.sid)); }));
+  return out;
+}
+async function sendReminder(base, targets) {
+  const id = 'r_' + now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const copy = clean({ kind: base.kind, tid: base.tid, title: base.title, note: base.note || '', due: base.due || '', createdAt: now() });
+  const ops = [['set', 'reminders/' + id, clean({ ...copy, grade: base.grade, label: base.label, targets })]];
+  targets.forEach(sid => ops.push(['set', `students/${sid}/reminders/${id}`, copy]));
+  await commitOps(ops);
+  AC.rems = undefined;
+}
+async function deleteReminder(r) {
+  await commitOps([['delete', 'reminders/' + r.id], ...(r.targets || []).map(sid => ['delete', `students/${sid}/reminders/${r.id}`])]);
+  AC.rems = undefined;
+}
+// tick-list of students used by the reminder forms
+function pickerHtml(list, sel) {
+  return list.map(s => `<label class="row" style="padding:5px 0;cursor:pointer"><input type="checkbox" data-ps="${esc(s.id)}" ${sel.has(s.id) ? 'checked' : ''}> ${esc(s.name || s.id)} <span class="tiny muted">Class ${studentGrade(s)} · ${esc(s.id)}</span></label>`).join('') || '<div class="tiny muted">No students.</div>';
+}
+function bindPicker(root, sel, onChange) { $$('[data-ps]', root).forEach(cb => cb.onchange = () => { cb.checked ? sel.add(cb.dataset.ps) : sel.delete(cb.dataset.ps); if (onChange) onChange(); }); }
+async function aRemindersView() {
+  const pg = aShell('reminders', 'Reminders', spinner());
+  guard(pg, async () => {
+    const [rems, studs] = await Promise.all([aRems(true), aStudents(true)]);
+    const taken = await takersOf(rems.filter(r => r.kind === 'test').map(r => r.tid));
+    const view = rems.map(r => { const ts = (r.targets || []).map(id => studs.find(s => s.id === id)).filter(Boolean); return { r, ts, done: ts.filter(s => remDone(r, s, taken)) }; });
+    pg.innerHTML = `<div class="info small">A reminder shows at the top of the student's <b>Home</b> page until they do it: take the test, or save their profile. Then it goes away by itself.</div>
+      <div class="row wrap"><button class="btn" id="rtest">${ICON.clock} Remind to take a test</button><button class="btn sec" id="rprof">👤 Remind to update profile</button></div>
+      <div class="sectiontitle">Sent reminders</div>
+      ${view.length ? `<div class="card" style="padding:4px 14px">${view.map(({ r, ts, done }) => `<div class="li" data-r="${esc(r.id)}"><div class="ricon sm">${r.kind === 'test' ? ICON.tests : ICON.user}</div>
+        <div class="grow" style="min-width:0"><div class="t">${r.kind === 'test' ? 'Take the test: ' + esc(r.title) : 'Update your profile'}</div>
+        <div class="small muted">${esc(r.label || '')} · sent ${fmtDay(r.createdAt)}${r.due ? ' · finish by ' + esc(fmtDob(r.due)) : ''}</div>
+        <div class="bar" style="margin-top:6px"><div style="width:${pct(done.length, ts.length)}%;background:var(--green)"></div></div></div>
+        <div class="right"><b>${done.length}/${ts.length}</b><div class="tiny muted">done</div></div></div>`).join('')}</div>` : '<div class="card empty">No reminders sent yet.</div>'}`;
+    $('#rtest').onclick = () => testReminderForm();
+    $('#rprof').onclick = () => profileReminderForm();
+    $$('[data-r]', pg).forEach(el => el.onclick = () => {
+      const { r, ts, done } = view.find(v => v.r.id === el.dataset.r);
+      const left = ts.filter(s => !done.includes(s));
+      const nameRow = s => `<div class="li" style="cursor:default"><div class="avatar">${avatarSvg(s.gender)}</div><div class="grow"><div class="t">${esc(s.name || s.id)}</div><div class="tiny muted">Class ${studentGrade(s)} · ${esc(s.id)}</div></div></div>`;
+      modal(`<h3>${r.kind === 'test' ? 'Take the test: ' + esc(r.title) : 'Update your profile'}</h3>
+        <p class="small muted" style="margin-top:0">Sent ${fmtDate(r.createdAt)} to ${ts.length} student${ts.length === 1 ? '' : 's'}${r.due ? ` · finish by ${esc(fmtDob(r.due))}` : ''}${r.note ? `<br>Message: “${esc(r.note)}”` : ''}</p>
+        <div style="max-height:46vh;overflow:auto"><div class="sectiontitle" style="margin-top:6px">Not done yet (${left.length})</div>${left.map(nameRow).join('') || '<div class="tiny muted">Everyone has done it. 🎉</div>'}
+        <div class="sectiontitle">Done (${done.length})</div>${done.map(nameRow).join('') || '<div class="tiny muted">Nobody yet.</div>'}</div>
+        <div class="row wrap" style="justify-content:flex-end;margin-top:12px"><button class="btn danger sm" id="rdel">Delete reminder</button><span class="grow"></span>
+        ${left.length ? `<button class="btn sec sm" id="ragain">Remind again (${left.length})</button>` : ''}<button class="btn sm" data-c>Close</button></div>`, (m, close) => {
+        m.querySelector('[data-c]').onclick = close;
+        $('#rdel', m).onclick = async () => { close(); if (await confirmBox('Delete this reminder?', 'Students will no longer see it on their Home page.', 'Delete', true)) await busy(null, async () => { await deleteReminder(r); toast('Reminder deleted'); aRemindersView(); }); };
+        if ($('#ragain', m)) $('#ragain', m).onclick = () => busy($('#ragain', m), async () => {
+          await sendReminder({ ...r, label: `${left.length} student${left.length === 1 ? '' : 's'} (again)` }, left.map(s => s.id));
+          close(); toast(`Reminder sent to ${left.length} student${left.length === 1 ? '' : 's'}`); aRemindersView();
+        });
+      });
+    });
+  });
+}
+async function testReminderForm() {
+  const [tests, studs] = await Promise.all([aTests(), aStudents()]);
+  let g = AC.g || 10;
+  const sel = new Set();
+  const kindOrder = { chapter: 0, mock: 1, custom: 2 };
+  const testsOf = gg => tests.filter(t => gradeOf(t) === gg && t.published !== false).sort((a, b) => (kindOrder[a.kind] ?? 2) - (kindOrder[b.kind] ?? 2) || (a.order ?? 999) - (b.order ?? 999) || String(a.title).localeCompare(b.title));
+  modal(`<h3>Remind students to take a test</h3>
+    <div class="grid2"><label class="field"><span>Class</span><select class="input" id="rg">${gradeOptions(g)}</select></label>
+    <label class="field"><span>Test</span><select class="input" id="rtid"></select></label></div>
+    <div class="field"><span>Send to</span><select class="input" id="rwho"><option value="left">Students who haven't taken it yet</option><option value="all">All students in the class</option><option value="some">Only the students I pick</option></select></div>
+    <div id="rsome" class="hidden" style="max-height:28vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:10px"></div>
+    <div id="rcount" class="small" style="margin:-4px 0 10px;font-weight:600"></div>
+    <label class="field"><span>Finish by (optional)</span><input class="input" type="date" id="rdue"></label>
+    <label class="field"><span>Message (optional)</span><textarea class="input" id="rnote" maxlength="300" style="min-height:64px" placeholder="e.g. Please finish it before Friday's class."></textarea></label>
+    <div id="rerr"></div><div class="row" style="justify-content:flex-end"><button class="btn sec" data-c>Cancel</button><button class="btn" id="rsend">Send reminder</button></div>`, (m, close) => {
+    let takers = new Set(), targets = [];
+    const inClass = () => studs.filter(s => studentGrade(s) === g);
+    const recount = () => {
+      const who = $('#rwho', m).value;
+      targets = who === 'some' ? [...sel] : inClass().filter(s => who === 'all' || !takers.has(s.id)).map(s => s.id);
+      $('#rcount', m).textContent = $('#rtid', m).value ? `This reminder goes to ${targets.length} student${targets.length === 1 ? '' : 's'}.` : '';
+    };
+    const fillTests = () => {
+      const list = testsOf(g);
+      $('#rtid', m).innerHTML = list.length ? list.map(t => `<option value="${esc(t.id)}">${esc(t.title)}</option>`).join('') : '<option value="">No visible tests for this class</option>';
+    };
+    const loadTakers = async () => { const tid = $('#rtid', m).value; takers = tid ? ((await takersOf([tid]))[tid] || new Set()) : new Set(); recount(); };
+    const drawSome = () => { const box = $('#rsome', m); box.innerHTML = pickerHtml(inClass(), sel); bindPicker(box, sel, recount); };
+    m.querySelector('[data-c]').onclick = close;
+    $('#rg', m).onchange = e => { g = Number(e.target.value); sel.clear(); fillTests(); drawSome(); loadTakers(); };
+    $('#rtid', m).onchange = loadTakers;
+    $('#rwho', m).onchange = e => { $('#rsome', m).classList.toggle('hidden', e.target.value !== 'some'); recount(); };
+    fillTests(); drawSome(); loadTakers();
+    $('#rsend', m).onclick = () => busy($('#rsend', m), async () => {
+      const tid = $('#rtid', m).value; const t = tests.find(x => x.id === tid);
+      const err = x => $('#rerr', m).innerHTML = `<div class="err">${esc(x)}</div>`;
+      if (!t) return err('Choose a test.');
+      if (!targets.length) return err($('#rwho', m).value === 'left' ? 'Every student in this class has already taken this test.' : 'Choose at least one student.');
+      const who = $('#rwho', m).value;
+      await sendReminder({ kind: 'test', tid, title: t.title, grade: g, note: $('#rnote', m).value.trim(), due: $('#rdue', m).value || '',
+        label: who === 'some' ? `${targets.length} student${targets.length === 1 ? '' : 's'}` : `Class ${g} · ${targets.length} student${targets.length === 1 ? '' : 's'}` }, targets);
+      close(); toast(`Reminder sent to ${targets.length} student${targets.length === 1 ? '' : 's'}`);
+      if (S.view === 'admin-reminders') aRemindersView();
+    });
+  });
+}
+async function profileReminderForm(preSel) {
+  const studs = await aStudents(true);
+  const sel = new Set(preSel || []);
+  let listG = 'all';
+  const missing = studs.filter(s => missingProfile(s).length);
+  modal(`<h3>Remind students to update their profile</h3>
+    <p class="small muted" style="margin-top:0">Students fill in their own date of birth, school, mobile number and address in <b>Profile → Edit my details</b>. Name and class stay with you.</p>
+    <div class="field"><span>Send to</span><select class="input" id="pwho">
+      <option value="missing" ${preSel ? '' : 'selected'}>Students with missing details (${missing.length})</option><option value="all">All students (${studs.length})</option>
+      <option value="class">One class</option><option value="some" ${preSel ? 'selected' : ''}>Only the students I pick</option></select></div>
+    <label class="field hidden" id="pcls"><span>Class</span><select class="input" id="pg">${gradeOptions(AC.g || 10)}</select></label>
+    <div id="psw" class="${preSel ? '' : 'hidden'}"><select class="input" id="plf" style="margin-bottom:6px"><option value="all">Show all classes</option>${GRADES.map(gg => `<option value="${gg}">Show Class ${gg}</option>`).join('')}</select>
+      <div id="psl" style="max-height:28vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:10px"></div></div>
+    <div id="pcount" class="small" style="margin:0 0 10px;font-weight:600"></div>
+    <label class="field"><span>Message (optional)</span><textarea class="input" id="pnote" maxlength="300" style="min-height:64px" placeholder="e.g. Please add your school name and date of birth."></textarea></label>
+    <div id="perr"></div><div class="row" style="justify-content:flex-end"><button class="btn sec" data-c>Cancel</button><button class="btn" id="psend">Send reminder</button></div>`, (m, close) => {
+    let targets = [];
+    const recount = () => {
+      const who = $('#pwho', m).value, gg = Number($('#pg', m).value);
+      targets = who === 'some' ? [...sel] : who === 'missing' ? missing.map(s => s.id) : who === 'class' ? studs.filter(s => studentGrade(s) === gg).map(s => s.id) : studs.map(s => s.id);
+      $('#pcount', m).textContent = `This reminder goes to ${targets.length} student${targets.length === 1 ? '' : 's'}.`;
+    };
+    const drawList = () => { const box = $('#psl', m); box.innerHTML = pickerHtml(studs.filter(s => listG === 'all' || studentGrade(s) === listG), sel); bindPicker(box, sel, recount); };
+    drawList(); recount();
+    m.querySelector('[data-c]').onclick = close;
+    $('#pwho', m).onchange = e => { $('#pcls', m).classList.toggle('hidden', e.target.value !== 'class'); $('#psw', m).classList.toggle('hidden', e.target.value !== 'some'); recount(); };
+    $('#pg', m).onchange = recount;
+    $('#plf', m).onchange = e => { listG = e.target.value === 'all' ? 'all' : Number(e.target.value); drawList(); };
+    $('#psend', m).onclick = () => busy($('#psend', m), async () => {
+      if (!targets.length) { $('#perr', m).innerHTML = `<div class="err">${$('#pwho', m).value === 'missing' ? 'No student has missing details. 🎉' : 'Choose at least one student.'}</div>`; return; }
+      const who = $('#pwho', m).value;
+      const label = who === 'class' ? `Class ${$('#pg', m).value} · ${targets.length} students` : who === 'missing' ? `${targets.length} with missing details` : who === 'all' ? `All students · ${targets.length}` : `${targets.length} student${targets.length === 1 ? '' : 's'}`;
+      await sendReminder({ kind: 'profile', title: 'Update your profile', note: $('#pnote', m).value.trim(), label }, targets);
+      close(); toast(`Reminder sent to ${targets.length} student${targets.length === 1 ? '' : 's'}`);
+      if (S.view === 'admin-reminders') aRemindersView();
+    });
+  });
+}
+
+// ---------- PRACTICE MOCKS ----------
+// Only MCQs that are in none of the tests go into the pool, so practising never gives away test answers.
+function poolEligible(qmap, tests, g) {
+  const inTests = new Set(tests.flatMap(t => t.qids || []));
+  return Object.values(qmap).filter(q => gradeOf(q) === g && q.type === 'MCQ' && Array.isArray(q.options) && q.options.length === 4 && q.options.every(o => String(o || '').trim())
+    && q.answer != null && !inTests.has(q.id));
+}
+async function buildPools(grades, onlyCh) {
+  const [qmap, tests] = await Promise.all([aQ(), aTests()]);
+  const ops = [];
+  for (const g of [...new Set(grades.map(Number))]) {
+    const byCh = {}; poolEligible(qmap, tests, g).forEach(q => (byCh[q.chapter] = byCh[q.chapter] || []).push(q));
+    const existing = await listC('pool', where('grade', '==', g));
+    const chs = [...new Set([...Object.keys(byCh).map(Number), ...existing.map(d => Number(d.chapter))])].filter(c => !onlyCh || onlyCh.map(Number).includes(c));
+    for (const c of chs) {
+      const id = poolId(g, c);
+      let list = (byCh[c] || []).sort(qSort);
+      if (!list.length) { if (existing.some(d => Number(d.chapter) === c)) ops.push(['delete', 'pool/' + id], ['delete', 'poolKeys/' + id]); continue; }
+      const mk = l => [clean({ grade: g, chapter: c, count: l.length, updatedAt: now(),
+          items: l.map(q => ({ qid: q.id, chapter: c, type: 'MCQ', marks: Number(q.marks) || 1, stem: q.stem || [], options: q.options, fixed: q.fixed === true ? true : undefined })) }),
+        clean({ grade: g, chapter: c, updatedAt: now(), items: Object.fromEntries(l.map(q => [q.id, { answer: q.answer, solution: q.solution || [] }])) })];
+      let [p, k] = mk(list);
+      while (list.length > 1 && (JSON.stringify(p).length > 900000 || JSON.stringify(k).length > 900000)) { list = list.slice(0, Math.floor(list.length * 0.8)); [p, k] = mk(list); }   // stay under Firestore's 1 MB per document
+      ops.push(['set', 'pool/' + id, p], ['set', 'poolKeys/' + id, k]);
+    }
+  }
+  await commitOps(ops, 8);
+}
+async function syncPool(grades, chs) {          // keeps the practice pool in step after questions or tests change
+  if (!S.settings.practiceOn) return;
+  try { await buildPools(grades, chs); }
+  catch (e) { console.warn('pool', e); toast('Practice questions could not be updated: ' + errMsg(e), 5000); }
+}
+async function aPracticeView() {
+  const pg = aShell('practice', 'Practice mocks', spinner());
+  guard(pg, async () => {
+    const [qmap, tests, studs] = await Promise.all([aQ(), aTests(), aStudents()]);
+    let pools = null, recent = [];
+    try { pools = await listC('pool'); recent = await listC('practice', orderBy('submittedAt', 'desc'), limit(60)); } catch (e) { console.warn(e); }
+    const on = S.settings.practiceOn === true;
+    const rows = GRADES.map(g => {
+      const elig = poolEligible(qmap, tests, g); const mcq = Object.values(qmap).filter(q => gradeOf(q) === g && q.type === 'MCQ').length;
+      const ps = (pools || []).filter(p => gradeOf(p) === g);
+      return { g, elig: elig.length, mcq, pooled: ps.reduce((s, p) => s + (p.count || 0), 0), chs: ps.length, at: Math.max(0, ...ps.map(p => p.updatedAt || 0)) };
+    }).filter(r => r.mcq || r.pooled);
+    pg.innerHTML = `${pools === null ? '<div class="err">Practice mocks need the new Firestore rules. Paste and publish firestore-rules.txt, then reload this page.</div>' : ''}
+      <div class="card"><div class="row"><div class="grow"><h3 style="margin:0">Students can make their own practice mocks</h3>
+        <div class="small" style="margin-top:4px">${on ? '<span class="chip g">● On</span>' : '<span class="chip n">○ Off</span>'}</div></div>
+        <button class="btn ${on ? 'danger' : 'green'}" id="ptog" ${pools === null ? 'disabled' : ''}>${on ? 'Turn off' : 'Turn on'}</button></div>
+        <ul class="small" style="margin:12px 0 0;padding-left:18px;color:var(--ink2)">
+          <li>In the <b>Tests</b> tab students tap <b>Make your own practice mock</b>, then pick one chapter or several (mixed), how many questions, and the timer.</li>
+          <li>The app marks it at once and shows the correct answers with your detailed solutions.</li>
+          <li>Practice mocks don't count in Results, Marking or exports of tests. You can see each student's practice below and on their student page.</li>
+          <li>Turn it off any time: students stop seeing the option straight away.</li></ul></div>
+      <div class="card"><div class="row"><h3 class="grow" style="margin:0">Questions students can practise</h3><button class="btn sec sm" id="pupd" ${pools === null ? 'disabled' : ''}>Update now</button></div>
+        <p class="small muted">Only <b>MCQs that are not in any of your tests</b> are used, so practice never gives away test answers. When practice is on, this list updates by itself whenever you add or change questions or tests.</p>
+        ${rows.length ? `<div class="tblwrap"><table class="tbl"><tr><th>Class</th><th class="num">MCQs</th><th class="num">Not in a test</th><th class="num">Students see</th></tr>
+          ${rows.map(r => `<tr><td><b>Class&nbsp;${r.g}</b>${r.at ? `<div class="tiny muted">updated ${fmtDay(r.at)}</div>` : ''}</td><td class="num">${r.mcq}</td><td class="num">${r.elig}</td><td class="num">${r.pooled}${r.chs ? ` <span class="tiny muted">(${r.chs} ch)</span>` : ''}</td></tr>`).join('')}</table></div>`
+          : '<div class="empty">No MCQs in the question bank yet.</div>'}
+        <p class="tiny muted" style="margin-bottom:0">Tip: once students have practised a question they know its answer, so pick other questions when you make an official test.</p></div>
+      <div class="row"><div class="sectiontitle grow">Latest practice mocks</div>${recent.length ? '<button class="btn sec sm" id="pcsv">⬇ All practice mocks (CSV)</button>' : ''}</div>
+      <div class="card" style="padding:4px 14px">${recent.length ? recent.map(p => { const s = studs.find(x => x.id === p.sid);
+        return `<div class="li" data-pm="${esc(p.id)}"><div class="avatar">${avatarSvg(s && s.gender)}</div><div class="grow" style="min-width:0"><div class="t">${esc(s ? s.name : p.sid)}</div>
+          <div class="small muted">Class ${gradeOf(s || p)} · ${esc(p.title)} · ${fmtDate(p.submittedAt)}</div></div><div class="right"><b>${p.score == null ? '–' : fmtNum(p.score) + '/' + p.max}</b><div class="tiny muted">${pct(p.score || 0, p.max || 1)}%</div></div></div>`; }).join('')
+        : '<div class="empty">No practice mocks yet.</div>'}</div>`;
+    $('#ptog').onclick = () => busy($('#ptog'), async () => {
+      if (!on) {
+        const grades = GRADES.filter(g => Object.values(qmap).some(q => gradeOf(q) === g && q.type === 'MCQ'));
+        await buildPools(grades);
+        await setDoc(D('config/settings'), { ...S.settings, practiceOn: true, updatedAt: now() }); S.settings.practiceOn = true;
+        toast('Practice mocks are on ✓');
+      } else {
+        if (!(await confirmBox('Turn off practice mocks?', 'Students will no longer be able to make or review practice mocks. Their past practice stays saved, and you can turn it on again any time.', 'Turn off'))) return;
+        await setDoc(D('config/settings'), { ...S.settings, practiceOn: false, updatedAt: now() }); S.settings.practiceOn = false;
+        toast('Practice mocks are off');
+      }
+      aPracticeView();
+    });
+    $('#pupd').onclick = () => busy($('#pupd'), async () => { await buildPools(GRADES); toast('Practice questions updated ✓'); aPracticeView(); });
+    if ($('#pcsv')) $('#pcsv').onclick = () => busy($('#pcsv'), async () => exportPractice(await listC('practice'), studs));
+    $$('[data-pm]', pg).forEach(el => el.onclick = () => aPracticeAttempt(recent.find(p => p.id === el.dataset.pm), () => aPracticeView()));
+  });
+}
+async function aPracticeAttempt(rec, back) {
+  const pg = aShell('practice', rec.title || 'Practice mock', spinner(), { back });
+  guard(pg, async () => {
+    const studs = await aStudents(); const s = studs.find(x => x.id === rec.sid);
+    const { itemById, keyItems } = await loadPracticeQuestions(rec.grade || gradeOf(s), rec.chapters);
+    pg.innerHTML = `<div class="card"><div class="row"><div class="avatar">${avatarSvg(s && s.gender)}</div><div class="grow"><b>${esc(s ? s.name : rec.sid)}</b> <span class="muted small">(${esc(rec.sid)} · Class ${gradeOf(s || rec)})</span>
+        <div class="small muted">${esc(rec.title)} · ${fmtDate(rec.submittedAt)} · ${fmtDur(rec.timeTaken || 0)}${rec.autoSubmitted ? ' · auto-submitted' : ''}</div></div></div>
+        <div class="chips" style="margin-top:10px"><span class="chip g">Score ${rec.score == null ? '–' : fmtNum(rec.score)}/${rec.max}</span><span class="chip">${rec.correct || 0} right</span><span class="chip r">${rec.wrong || 0} wrong</span><span class="chip n">${rec.blank || 0} blank</span></div></div>
+      <div class="info small">A practice mock the student made. It doesn't count in results. Options are shown in the order this student saw them.</div>
+      <div id="rqs">${practiceReviewHtml(rec, itemById, keyItems, rec.sid)}</div>`;
+    fillImages(pg);
+  });
+}
+function exportPractice(list, studs) {
+  const rows = [['Student ID', 'Name', 'Class', 'Practice mock', 'Chapters', 'Questions', 'Score', 'Max', 'Percent', 'Time (min)', 'Submitted']];
+  list.slice().sort((a, b) => String(a.sid).localeCompare(b.sid) || (a.submittedAt || 0) - (b.submittedAt || 0)).forEach(p => {
+    const s = studs.find(x => x.id === p.sid) || {};
+    rows.push([p.sid, s.name || '(deleted)', p.grade ?? '', p.title, (p.chapters || []).join(' '), (p.qids || []).length, p.score ?? '', p.max ?? '', pct(p.score || 0, p.max || 1), Math.round((p.timeTaken || 0) / 60), fmtDate(p.submittedAt)]);
+  });
+  download(`practice-mocks-${stamp()}.csv`, csv(rows), 'text/csv;charset=utf-8'); toast('Practice mocks exported');
+}
+
+// ---------- CHAPTER VIDEOS (saved as resources of type "Video") ----------
+async function aVideos() {
+  const pg = aShell('videos', 'Chapter videos', spinner());
+  let g = AC.g || 10;
+  guard(pg, async () => {
+    const all = await aRes(true);
+    const draw = () => {
+      const vids = all.filter(r => gradeOf(r) === g && isVideoRes(r)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      const named = chaptersOf(g).length;
+      const nums = chapterNums(g, vids.map(v => v.chapter)).filter(n => n <= named || vids.some(v => Number(v.chapter) === n));
+      pg.innerHTML = `${gradeChips(g)}<div class="info small">Paste a YouTube link for a chapter, for example a one-shot video. Students see a <b>▶ Video</b> button beside that chapter in <b>Revise</b>, and the video plays inside the app.</div>
+        ${nums.length ? `<div class="card" style="padding:4px 14px">${nums.map(n => { const vs = vids.filter(v => Number(v.chapter) === n);
+          return `<div class="vrow"><div class="row"><div class="grow"><div class="t">${n}. ${esc(chName(g, n))}</div>${vs.length ? '' : '<div class="tiny muted">No video yet</div>'}</div>
+            <button class="btn ${vs.length ? 'ghost' : 'sec'} sm" data-addv="${n}">${vs.length ? '+ Another' : '+ Add video'}</button></div>
+            ${vs.map(v => { const p = ytParse(v.link); return `<div class="vitem" data-editv="${esc(v.id)}">${p && p.id ? `<img src="https://i.ytimg.com/vi/${esc(p.id)}/mqdefault.jpg" alt="" loading="lazy">` : `<div class="vth">${ICON.play}</div>`}
+              <div class="grow" style="min-width:0"><div class="small"><b>${esc(v.title || 'Video')}</b></div><div class="tiny muted clip">${esc(v.link)}</div></div><span class="btn ghost sm">Edit</span></div>`; }).join('')}</div>`; }).join('')}</div>`
+          : `<div class="card empty">No chapters for Class ${g} yet. Add the chapter names first in <b>Classes & chapters</b>.<div class="sp"></div><button class="btn sec sm" id="goch">Open Classes & chapters</button></div>`}`;
+      bindGradeChips(pg, v => { g = AC.g = v; draw(); });
+      if ($('#goch')) $('#goch').onclick = () => aNav('classes');
+      $$('[data-addv]', pg).forEach(b => b.onclick = () => videoForm(null, g, Number(b.dataset.addv)));
+      $$('[data-editv]', pg).forEach(b => b.onclick = () => videoForm(all.find(r => r.id === b.dataset.editv), g));
+    };
+    draw();
+  });
+}
+function videoForm(v, g, ch) {
+  v = v || { grade: g, chapter: ch || 1, type: 'Video', title: 'One-shot video', link: '' };
+  const vg = gradeOf(v);
+  modal(`<h3>${v.id ? 'Edit video' : 'Add a chapter video'}</h3>
+    <p class="small muted" style="margin-top:0">Class ${vg}</p>
+    <label class="field"><span>Chapter</span><select class="input" id="vc">${chapterOptions(vg, v.chapter, [v.chapter])}</select></label>
+    <label class="field"><span>YouTube link</span><input class="input" id="vl" inputmode="url" autocapitalize="none" value="${esc(v.link)}" placeholder="https://youtu.be/…"></label>
+    <p class="tiny muted" style="margin:-6px 0 10px">On YouTube: open the video → <b>Share</b> → <b>Copy link</b>, then paste it here.</p>
+    <label class="field"><span>Title students see</span><input class="input" id="vt" maxlength="80" value="${esc(v.title || '')}" placeholder="One-shot video"></label>
+    <div id="vpv"></div><div id="verr"></div>
+    <div class="row" style="justify-content:flex-end">${v.id ? '<button class="btn danger" id="vdel">Delete</button><span class="grow"></span>' : ''}<button class="btn sec" data-c>Cancel</button><button class="btn" id="vsave">Save</button></div>`, (m, close) => {
+    const pv = () => {
+      const raw = $('#vl', m).value.trim(); const p = ytParse(raw);
+      $('#vpv', m).innerHTML = !raw ? '' : p ? `<div class="vitem" style="cursor:default;margin:0 0 10px">${p.id ? `<img src="https://i.ytimg.com/vi/${esc(p.id)}/mqdefault.jpg" alt="">` : `<div class="vth">${ICON.play}</div>`}<div class="small">✓ ${p.id ? 'YouTube video found' : 'YouTube playlist found'}${p.start ? ` (starts at ${fmtDur(p.start)})` : ''}</div></div>`
+        : '<div class="err">This is not a YouTube video link. Copy it from YouTube → Share → Copy link.</div>';
+    };
+    pv(); $('#vl', m).oninput = pv;
+    m.querySelector('[data-c]').onclick = close;
+    $('#vsave', m).onclick = () => busy($('#vsave', m), async () => {
+      const link = $('#vl', m).value.trim();
+      if (!ytParse(link)) { $('#verr', m).innerHTML = '<div class="err">Paste a YouTube link, e.g. https://youtu.be/abc123XYZ_0</div>'; return; }
+      const data = { grade: vg, chapter: Number($('#vc', m).value), type: 'Video', title: $('#vt', m).value.trim() || 'One-shot video', link, updatedAt: now(), createdAt: v.createdAt || now() };
+      await setDoc(D('resources/' + (v.id || 'v_' + now().toString(36))), data);
+      AC.res = undefined; close(); toast('Video saved ✓'); aVideos();
+    });
+    if (v.id) $('#vdel', m).onclick = async () => { close(); if (await confirmBox('Delete this video?', 'Students will no longer see it. (The video stays on YouTube.)', 'Delete', true)) await busy(null, async () => { await deleteDoc(D('resources/' + v.id)); AC.res = undefined; toast('Deleted'); aVideos(); }); };
+  });
 }
 
 </script>
